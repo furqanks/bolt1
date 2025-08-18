@@ -1,10 +1,6 @@
-import { PaperEditor } from '@/components/editor/paper-editor';
+export const dynamic = 'force-dynamic';
 
-export async function generateStaticParams() {
-  // Return empty array since paper IDs are dynamic and user-generated
-  // This satisfies Next.js static export requirements
-  return [];
-}
+import { PaperEditor } from '@/components/editor/paper-editor';
 
 export default function EditorPage({ params }: { params: { id: string } }) {
   return <PaperEditor paperId={params.id} />;
