@@ -51,6 +51,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [paper, setPaper] = useState<Paper | null>(null);
   const [activeSection, setActiveSection] = useState('abstract');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showAiFeedback, setShowAiFeedback] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -77,9 +78,10 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
     setIsLoading(false);
   }, [user, paperId, router]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!paper) return;
 
+    setSaveStatus('saving');
     const savedPapers = localStorage.getItem('researchflow_papers');
     if (savedPapers) {
       const papers = JSON.parse(savedPapers);
@@ -88,7 +90,18 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
       );
       localStorage.setItem('researchflow_papers', JSON.stringify(updatedPapers));
       setLastSaved(new Date());
+      setSaveStatus('saved');
+      
+      // Auto-hide saved status after 2 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
     }
+  };
+
+  const handleContentChange = (updatedPaper: Paper) => {
+    setPaper(updatedPaper);
+    handleSave();
   };
 
   if (isLoading) {
@@ -139,8 +152,14 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
                   </h1>
                   <div className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                     <Badge variant="secondary" className="text-xs">{paper.type}</Badge>
-                    {lastSaved && (
-                      <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                    {saveStatus === 'saving' && (
+                      <span className="text-blue-600 dark:text-blue-400">Saving...</span>
+                    )}
+                    {saveStatus === 'saved' && (
+                      <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>
+                    )}
+                    {saveStatus === 'idle' && lastSaved && (
+                      <span>Last saved {lastSaved.toLocaleTimeString()}</span>
                     )}
                   </div>
                 </div>
@@ -200,7 +219,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               <ContentEditor
                 activeSection={activeSection}
                 paper={paper}
-                onUpdate={(updatedPaper) => setPaper(updatedPaper)}
+                onUpdate={handleContentChange}
               />
             </TabsContent>
 
