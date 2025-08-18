@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { 
   Bold, 
   Italic, 
@@ -16,6 +17,9 @@ import {
   Quote,
   Link,
   Brain,
+  Wand2,
+  FileText,
+  CheckCircle,
   BookOpen,
   Target,
   Clock
@@ -88,6 +92,10 @@ const sectionContent: { [key: string]: { title: string; placeholder: string; gui
 export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorProps) {
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiTask, setAiTask] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
   const section = sectionContent[activeSection] || {
@@ -100,6 +108,90 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
     const newContent = e.currentTarget.textContent || '';
     setContent(newContent);
     setWordCount(newContent.trim() ? newContent.trim().split(/\s+/).length : 0);
+    
+    // Trigger autosave through parent component
+    if (onUpdate && paper) {
+      onUpdate({
+        ...paper,
+        content: {
+          ...paper.content,
+          [activeSection]: newContent
+        }
+      });
+    }
+  };
+
+  const getCurrentSectionText = () => {
+    return editorRef.current?.textContent || content || '';
+  };
+
+  const handleAiAction = async (task: 'critique' | 'rewrite' | 'summarize' | 'proofread') => {
+    const sectionText = getCurrentSectionText();
+    
+    if (!sectionText.trim()) {
+      toast.error('Please write some content first before using AI features.');
+      return;
+    }
+
+    setIsAiLoading(true);
+    setAiTask(task);
+
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, sectionText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'AI request failed');
+      }
+
+      switch (task) {
+        case 'critique':
+          // Show feedback in a structured way
+          const { strengths, weaknesses, suggestions } = data.feedback;
+          let feedbackMessage = '**Strengths:**\n';
+          strengths.forEach((s: string) => feedbackMessage += `• ${s}\n`);
+          feedbackMessage += '\n**Areas for Improvement:**\n';
+          weaknesses.forEach((w: string) => feedbackMessage += `• ${w}\n`);
+          feedbackMessage += '\n**Suggestions:**\n';
+          suggestions.forEach((s: string) => feedbackMessage += `• ${s}\n`);
+          
+          toast.success('AI Feedback Generated', {
+            description: 'Check the detailed feedback below',
+            duration: 5000,
+          });
+          
+          // You could show this in a modal or side panel
+          console.log('AI Feedback:', feedbackMessage);
+          break;
+          
+        case 'rewrite':
+        case 'proofread':
+          if (editorRef.current && data.revised) {
+            editorRef.current.textContent = data.revised;
+            setContent(data.revised);
+            setWordCount(data.revised.trim().split(/\s+/).length);
+            toast.success(`Content ${task === 'rewrite' ? 'rewritten' : 'proofread'} successfully`);
+          }
+          break;
+          
+        case 'summarize':
+          setSummaryText(data.summary);
+          setShowSummary(true);
+          toast.success('Summary generated successfully');
+          break;
+      }
+    } catch (error) {
+      console.error('AI action failed:', error);
+      toast.error(`Failed to ${task} content. Please try again.`);
+    } finally {
+      setIsAiLoading(false);
+      setAiTask(null);
+    }
   };
 
   const formatText = (command: string, value?: string) => {
@@ -123,10 +215,47 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
             </div>
             
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Brain className="w-4 h-4 mr-2" />
-                AI Feedback
-              </Button>
+              <div className="flex items-center space-x-1 border-r border-slate-200 dark:border-slate-700 pr-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAiAction('critique')}
+                  disabled={isAiLoading}
+                >
+                  <Brain className="w-4 h-4 mr-2" />
+                  {isAiLoading && aiTask === 'critique' ? 'Analyzing...' : 'AI Feedback'}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAiAction('rewrite')}
+                  disabled={isAiLoading}
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  {isAiLoading && aiTask === 'rewrite' ? 'Rewriting...' : 'Rewrite'}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAiAction('summarize')}
+                  disabled={isAiLoading}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {isAiLoading && aiTask === 'summarize' ? 'Summarizing...' : 'Summarize'}
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAiAction('proofread')}
+                  disabled={isAiLoading}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {isAiLoading && aiTask === 'proofread' ? 'Proofreading...' : 'Proofread'}
+                </Button>
+              </div>
               
               <Button variant="outline" size="sm">
                 <BookOpen className="w-4 h-4 mr-2" />
@@ -200,6 +329,26 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
           >
             {/* Placeholder styling handled by CSS */}
           </div>
+
+          {/* Summary Panel */}
+          {showSummary && summaryText && (
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100">AI Summary</h4>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowSummary(false)}
+                  className="text-blue-600 dark:text-blue-400"
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-line">
+                {summaryText}
+              </div>
+            </div>
+          )}
 
           {/* Writing Tips */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
