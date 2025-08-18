@@ -73,6 +73,8 @@ export function CitationManager({ paperId }: CitationManagerProps) {
   const [citationFormat, setCitationFormat] = useState('apa');
   const [showAddSource, setShowAddSource] = useState(false);
   const [editingSource, setEditingSource] = useState<Source | null>(null);
+  const [doiInput, setDoiInput] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   const [newSource, setNewSource] = useState<Partial<Source>>({
     type: 'journal',
     title: '',
@@ -146,6 +148,53 @@ export function CitationManager({ paperId }: CitationManagerProps) {
 
   const handleCopyCitation = (source: Source) => {
     navigator.clipboard.writeText(formatCitation(source, citationFormat as 'apa' | 'mla'));
+  };
+
+  const handleDoiImport = async () => {
+    if (!doiInput.trim()) {
+      toast.error('Please enter a DOI');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const response = await fetch('/api/citations/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doi: doiInput.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resolve DOI');
+      }
+
+      // Pre-fill the add source form with metadata
+      const { metadata } = data;
+      setNewSource({
+        type: metadata.type || 'journal',
+        title: metadata.title || '',
+        author: Array.isArray(metadata.authors) ? metadata.authors.join(', ') : metadata.authors || '',
+        year: metadata.year || '',
+        journal: metadata.journal || '',
+        volume: metadata.volume || '',
+        pages: metadata.pages || '',
+        url: metadata.url || '',
+        doi: metadata.doi || doiInput.trim(),
+        publisher: metadata.publisher || '',
+        notes: `Imported from DOI: ${doiInput.trim()}`
+      });
+
+      setDoiInput('');
+      setShowAddSource(true);
+      toast.success('DOI resolved successfully! Review and save the source.');
+    } catch (error) {
+      console.error('DOI import failed:', error);
+      toast.error('Failed to resolve DOI. Please check the DOI and try again.');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const filteredSources = sources.filter(source => {
@@ -365,6 +414,31 @@ export function CitationManager({ paperId }: CitationManagerProps) {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+
+      {/* DOI Import */}
+      <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+        <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Quick Import</h3>
+        <div className="flex items-center space-x-3">
+          <div className="flex-1">
+            <Input
+              placeholder="Enter DOI (e.g., 10.1016/j.example.2023.123456)"
+              value={doiInput}
+              onChange={(e) => setDoiInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleDoiImport()}
+            />
+          </div>
+          <Button 
+            onClick={handleDoiImport}
+            disabled={isImporting || !doiInput.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {isImporting ? 'Importing...' : 'Import by DOI'}
+          </Button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+          Import citation metadata automatically using a DOI
+        </p>
       </div>
 
       {/* Search and Filters */}
