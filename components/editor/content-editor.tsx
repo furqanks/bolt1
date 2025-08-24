@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -17,9 +18,10 @@ import {
   Quote,
   Link,
   Brain,
-  Wand2,
-  FileText,
-  CheckCircle,
+  Lightbulb,
+  Search,
+  PenTool,
+  ChevronDown,
   BookOpen,
   Target,
   Clock
@@ -29,6 +31,7 @@ interface ContentEditorProps {
   activeSection: string;
   paper: any;
   onUpdate: (paper: any) => void;
+  onAiResult: (type: string, data: any) => void;
 }
 
 const sectionContent: { [key: string]: { title: string; placeholder: string; guidance: string } } = {
@@ -89,13 +92,11 @@ const sectionContent: { [key: string]: { title: string; placeholder: string; gui
   }
 };
 
-export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorProps) {
+export function ContentEditor({ activeSection, paper, onUpdate, onAiResult }: ContentEditorProps) {
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiTask, setAiTask] = useState<string | null>(null);
-  const [showSummary, setShowSummary] = useState(false);
-  const [summaryText, setSummaryText] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
   const section = sectionContent[activeSection] || {
@@ -125,10 +126,10 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
     return editorRef.current?.textContent || content || '';
   };
 
-  const handleAiAction = async (task: 'critique' | 'rewrite' | 'summarize' | 'proofread') => {
+  const handleAiAction = async (task: string, wordTarget?: number) => {
     const sectionText = getCurrentSectionText();
     
-    if (!sectionText.trim()) {
+    if (!sectionText.trim() && !['rqs', 'hypotheses', 'contributions', 'suggest_citations'].includes(task)) {
       toast.error('Please write some content first before using AI features.');
       return;
     }
@@ -140,7 +141,13 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task, sectionText }),
+        body: JSON.stringify({ 
+          task, 
+          sectionText, 
+          wordTarget,
+          field: paper?.topic || 'research',
+          notes: paper?.description || ''
+        }),
       });
 
       const data = await response.json();
@@ -149,45 +156,22 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
         throw new Error(data.error || 'AI request failed');
       }
 
-      switch (task) {
-        case 'critique':
-          // Show feedback in a structured way
-          const { strengths, weaknesses, suggestions } = data.feedback;
-          let feedbackMessage = '**Strengths:**\n';
-          strengths.forEach((s: string) => feedbackMessage += `• ${s}\n`);
-          feedbackMessage += '\n**Areas for Improvement:**\n';
-          weaknesses.forEach((w: string) => feedbackMessage += `• ${w}\n`);
-          feedbackMessage += '\n**Suggestions:**\n';
-          suggestions.forEach((s: string) => feedbackMessage += `• ${s}\n`);
-          
-          toast.success('AI Feedback Generated', {
-            description: 'Check the detailed feedback below',
-            duration: 5000,
-          });
-          
-          // You could show this in a modal or side panel
-          console.log('AI Feedback:', feedbackMessage);
-          break;
-          
-        case 'rewrite':
-        case 'proofread':
-          if (editorRef.current && data.revised) {
-            editorRef.current.textContent = data.revised;
-            setContent(data.revised);
-            setWordCount(data.revised.trim().split(/\s+/).length);
-            toast.success(`Content ${task === 'rewrite' ? 'rewritten' : 'proofread'} successfully`);
-          }
-          break;
-          
-        case 'summarize':
-          setSummaryText(data.summary);
-          setShowSummary(true);
-          toast.success('Summary generated successfully');
-          break;
+      // Handle content replacement tasks
+      if (['rewrite', 'proofread', 'shorten', 'expand', 'bullets_to_paragraph', 'paragraph_to_bullets'].includes(task) && data.revised) {
+        if (editorRef.current) {
+          editorRef.current.textContent = data.revised;
+          setContent(data.revised);
+          setWordCount(data.revised.trim().split(/\s+/).length);
+          toast.success(`Content ${task} completed successfully`);
+        }
+      } else {
+        // Send results to AI panel
+        onAiResult(task, data);
+        toast.success('AI analysis completed');
       }
     } catch (error) {
       console.error('AI action failed:', error);
-      toast.error(`Failed to ${task} content. Please try again.`);
+      toast.error(`AI action failed. Please try again.`);
     } finally {
       setIsAiLoading(false);
       setAiTask(null);
@@ -214,56 +198,112 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
               <span className="font-medium">{wordCount}</span> words
             </div>
             
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1 border-r border-slate-200 dark:border-slate-700 pr-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleAiAction('critique')}
-                  disabled={isAiLoading}
-                >
-                  <Brain className="w-4 h-4 mr-2" />
-                  {isAiLoading && aiTask === 'critique' ? 'Analyzing...' : 'AI Feedback'}
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleAiAction('rewrite')}
-                  disabled={isAiLoading}
-                >
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  {isAiLoading && aiTask === 'rewrite' ? 'Rewriting...' : 'Rewrite'}
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleAiAction('summarize')}
-                  disabled={isAiLoading}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  {isAiLoading && aiTask === 'summarize' ? 'Summarizing...' : 'Summarize'}
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleAiAction('proofread')}
-                  disabled={isAiLoading}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {isAiLoading && aiTask === 'proofread' ? 'Proofreading...' : 'Proofread'}
-                </Button>
-              </div>
-              
-              <Button variant="outline" size="sm">
-                <BookOpen className="w-4 h-4 mr-2" />
-                Add Citation
-              </Button>
+            <div className="flex items-center space-x-2 border-r border-slate-200 dark:border-slate-700 pr-4">
+              {/* Ideate Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isAiLoading}>
+                    <Lightbulb className="w-4 h-4 mr-2" />
+                    Ideate
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleAiAction('rqs')}>
+                    Generate Research Questions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('hypotheses')}>
+                    Refine Hypotheses
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('contributions')}>
+                    Outline Contributions
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Evidence Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isAiLoading}>
+                    <Search className="w-4 h-4 mr-2" />
+                    Evidence
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>
+                    Suggest Citations
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>
+                    Synthesize 3–5 Sources
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>
+                    Spot Gaps/Contradictions
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Write/Polish Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isAiLoading}>
+                    <PenTool className="w-4 h-4 mr-2" />
+                    Write/Polish
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleAiAction('critique')}>
+                    AI Feedback
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>
+                    Rewrite
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('proofread')}>
+                    Proofread
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>
+                    Shorten to 150 words
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>
+                    Expand to 300 words
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>
+                    Convert Bullets → Paragraph
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>
+                    Convert Paragraph → Bullets
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+              
+            <Button variant="outline" size="sm">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Add Citation
+            </Button>
           </div>
         </div>
+        
+        {isAiLoading && (
+          <div className="px-6 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+            <div className="flex items-center text-sm text-blue-700 dark:text-blue-300">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+              AI is {aiTask === 'rqs' ? 'generating research questions' : 
+                     aiTask === 'hypotheses' ? 'refining hypotheses' :
+                     aiTask === 'contributions' ? 'outlining contributions' :
+                     aiTask === 'suggest_citations' ? 'suggesting citations' :
+                     aiTask === 'synthesize_sources' ? 'synthesizing sources' :
+                     aiTask === 'spot_gaps' ? 'identifying gaps' :
+                     aiTask === 'critique' ? 'analyzing content' :
+                     aiTask === 'rewrite' ? 'rewriting content' :
+                     aiTask === 'proofread' ? 'proofreading content' :
+                     aiTask === 'shorten' ? 'shortening content' :
+                     aiTask === 'expand' ? 'expanding content' :
+                     'processing your request'}...
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -329,26 +369,6 @@ export function ContentEditor({ activeSection, paper, onUpdate }: ContentEditorP
           >
             {/* Placeholder styling handled by CSS */}
           </div>
-
-          {/* Summary Panel */}
-          {showSummary && summaryText && (
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100">AI Summary</h4>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowSummary(false)}
-                  className="text-blue-600 dark:text-blue-400"
-                >
-                  ×
-                </Button>
-              </div>
-              <div className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-line">
-                {summaryText}
-              </div>
-            </div>
-          )}
 
           {/* Writing Tips */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">

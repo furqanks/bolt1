@@ -26,7 +26,7 @@ import {
 import { OutlinePanel } from './outline-panel';
 import { ContentEditor } from './content-editor';
 import { CitationManager } from './citation-manager';
-import { AiFeedbackModal } from './ai-feedback-modal';
+import { AiPanel } from './ai-panel';
 
 interface Paper {
   id: string;
@@ -52,7 +52,10 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [activeSection, setActiveSection] = useState('abstract');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [showAiFeedback, setShowAiFeedback] = useState(false);
+  const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false);
+  const [aiResults, setAiResults] = useState<{ [key: string]: any }>({});
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [currentAiTask, setCurrentAiTask] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -97,6 +100,16 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         setSaveStatus('idle');
       }, 2000);
     }
+  };
+
+  const handleAiResult = (task: string, data: any) => {
+    setAiResults(prev => ({ ...prev, [task]: data }));
+  };
+
+  const handleAiAction = async (task: string, wordTarget?: number) => {
+    setIsAiLoading(true);
+    setCurrentAiTask(task);
+    // This will be handled by the ContentEditor component
   };
 
   const handleContentChange = (updatedPaper: Paper) => {
@@ -195,7 +208,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-64px)]">
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
         {/* Sidebar - Outline */}
         <div className="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
           <OutlinePanel
@@ -204,8 +217,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
           />
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        {/* Main Content Area */}
+        <div className={`flex-1 flex flex-col ${aiPanelCollapsed ? '' : 'mr-0'}`}>
           <Tabs defaultValue="write" className="flex-1 flex flex-col">
             <div className="border-b border-slate-200 dark:border-slate-700 px-6">
               <TabsList className="grid w-full max-w-md grid-cols-3">
@@ -220,6 +233,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
                 activeSection={activeSection}
                 paper={paper}
                 onUpdate={handleContentChange}
+                onAiResult={handleAiResult}
               />
             </TabsContent>
 
@@ -270,14 +284,17 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
 
-      {/* AI Feedback Modal */}
-      <AiFeedbackModal
-        isOpen={showAiFeedback}
-        onClose={() => setShowAiFeedback(false)}
-        section={activeSection}
-      />
+        {/* AI Panel */}
+        <AiPanel
+          isCollapsed={aiPanelCollapsed}
+          onToggle={() => setAiPanelCollapsed(!aiPanelCollapsed)}
+          aiResults={aiResults}
+          onAiAction={handleAiAction}
+          isLoading={isAiLoading}
+          currentTask={currentAiTask}
+        />
+      </div>
     </div>
   );
 }
