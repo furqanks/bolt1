@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { 
   Bold, 
@@ -24,14 +25,25 @@ import {
   ChevronDown,
   BookOpen,
   Target,
-  Clock
+  Clock,
+  History,
+  Eye,
+  RotateCcw
 } from 'lucide-react';
+
+interface Version {
+  id: string;
+  timestamp: Date;
+  content: string;
+  preview: string;
+}
 
 interface ContentEditorProps {
   activeSection: string;
   paper: any;
   onUpdate: (paper: any) => void;
   onAiResult: (type: string, data: any) => void;
+  onSaveStatusChange?: (status: 'idle' | 'saving' | 'saved') => void;
 }
 
 const sectionContent: { [key: string]: { title: string; placeholder: string; guidance: string } } = {
@@ -92,12 +104,18 @@ const sectionContent: { [key: string]: { title: string; placeholder: string; gui
   }
 };
 
-export function ContentEditor({ activeSection, paper, onUpdate, onAiResult }: ContentEditorProps) {
+export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSaveStatusChange }: ContentEditorProps) {
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiTask, setAiTask] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<Version | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const section = sectionContent[activeSection] || {
     title: 'Section',
@@ -105,21 +123,113 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult }: Co
     guidance: 'Write your content here.'
   };
 
+  // Load content and versions on section change
+  useEffect(() => {
+    if (!paper?.id || !activeSection) return;
+    
+    // Load content
+    const savedContent = localStorage.getItem(`paper_${paper.id}_section_${activeSection}`);
+    if (savedContent) {
+      setContent(savedContent);
+      if (editorRef.current) {
+        editorRef.current.textContent = savedContent;
+      }
+      setWordCount(savedContent.trim() ? savedContent.trim().split(/\s+/).length : 0);
+    } else {
+      setContent('');
+      if (editorRef.current) {
+        editorRef.current.textContent = '';
+      }
+      setWordCount(0);
+    }
+    
+    // Load versions
+    const savedVersions = localStorage.getItem(`paper_${paper.id}_section_${activeSection}_versions`);
+    if (savedVersions) {
+      const parsedVersions = JSON.parse(savedVersions).map((v: any) => ({
+        ...v,
+        timestamp: new Date(v.timestamp)
+      }));
+      setVersions(parsedVersions);
+    } else {
+      setVersions([]);
+    }
+  }, [paper?.id, activeSection]);
+
+  const saveDraft = useCallback((sectionId: string, content: string) => {
+    if (!paper?.id) return;
+    
+    setSaveStatus('saving');
+    onSaveStatusChange?.('saving');
+    
+    // Simulate save delay
+    setTimeout(() => {
+      // Save content
+      localStorage.setItem(`paper_${paper.id}_section_${sectionId}`, content);
+      
+      // Create version snapshot if content is substantial
+      if (content.trim().length > 10) {
+        const newVersion: Version = {
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          content,
+          preview: content.trim().slice(0, 60) + (content.trim().length > 60 ? '...' : '')
+        };
+        
+        const updatedVersions = [newVersion, ...versions].slice(0, 10); // Keep only 10 versions
+        setVersions(updatedVersions);
+        localStorage.setItem(`paper_${paper.id}_section_${sectionId}_versions`, JSON.stringify(updatedVersions));
+      }
+      
+      setSaveStatus('saved');
+      onSaveStatusChange?.('saved');
+      
+      // Clear status after 2 seconds
+      if (statusTimeoutRef.current) {
+        clearTimeout(statusTimeoutRef.current);
+      }
+      statusTimeoutRef.current = setTimeout(() => {
+        setSaveStatus('idle');
+        onSaveStatusChange?.('idle');
+      }, 2000);
+    }, 300);
+  }, [paper?.id, versions, onSaveStatusChange]);
+
   const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
     const newContent = e.currentTarget.textContent || '';
     setContent(newContent);
     setWordCount(newContent.trim() ? newContent.trim().split(/\s+/).length : 0);
     
-    // Trigger autosave through parent component
-    if (onUpdate && paper) {
-      onUpdate({
-        ...paper,
-        content: {
-          ...paper.content,
-          [activeSection]: newContent
-        }
-      });
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+    
+    // Set new timeout for debounced save
+    saveTimeoutRef.current = setTimeout(() => {
+      saveDraft(activeSection, newContent);
+    }, 1000);
+  };
+
+  const handleRestoreVersion = (version: Version) => {
+    if (editorRef.current) {
+      editorRef.current.textContent = version.content;
+      setContent(version.content);
+      setWordCount(version.content.trim() ? version.content.trim().split(/\s+/).length : 0);
+      saveDraft(activeSection, version.content);
+      setShowVersions(false);
+      setPreviewVersion(null);
+      toast.success('Version restored successfully');
+    }
+  };
+
+  const formatTimestamp = (date: Date) => {
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getCurrentSectionText = () => {
@@ -189,11 +299,74 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult }: Co
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
+              
+              {/* Versions Dropdown */}
+              <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={versions.length === 0}>
+                    <History className="w-4 h-4 mr-2" />
+                    Versions ({versions.length})
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-80">
+                  {versions.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500 dark:text-slate-400">
+                      No versions saved yet
+                    </div>
+                  ) : (
+                    versions.map((version) => (
+                      <div key={version.id} className="p-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                              {formatTimestamp(version.timestamp)}
+                            </div>
+                            <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+                              {version.preview}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1 ml-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setPreviewVersion(version)}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleRestoreVersion(version)}
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{section.guidance}</p>
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Save Status */}
+            <div className="text-sm text-slate-600 dark:text-slate-300">
+              {saveStatus === 'saving' && (
+                <span className="text-blue-600 dark:text-blue-400">Saving...</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>
+              )}
+            </div>
+            
             <div className="text-sm text-slate-600 dark:text-slate-300">
               <span className="font-medium">{wordCount}</span> words
             </div>
@@ -404,6 +577,34 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult }: Co
           </div>
         </div>
       </div>
+
+      {/* Version Preview Modal */}
+      <Dialog open={!!previewVersion} onOpenChange={() => setPreviewVersion(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Version Preview</DialogTitle>
+            <DialogDescription>
+              {previewVersion && `Saved on ${formatTimestamp(previewVersion.timestamp)}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-96 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
+              {previewVersion?.content || ''}
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setPreviewVersion(null)}>
+              Close
+            </Button>
+            <Button onClick={() => previewVersion && handleRestoreVersion(previewVersion)}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Restore This Version
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style jsx>{`
         [contenteditable]:empty:before {

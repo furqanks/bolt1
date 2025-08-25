@@ -57,6 +57,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [currentAiTask, setCurrentAiTask] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [globalSaveStatus, setGlobalSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   useEffect(() => {
     if (!user) {
@@ -81,27 +82,6 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
     setIsLoading(false);
   }, [user, paperId, router]);
 
-  const handleSave = async () => {
-    if (!paper) return;
-
-    setSaveStatus('saving');
-    const savedPapers = localStorage.getItem('researchflow_papers');
-    if (savedPapers) {
-      const papers = JSON.parse(savedPapers);
-      const updatedPapers = papers.map((p: Paper) =>
-        p.id === paperId ? { ...paper, lastModified: new Date().toISOString().split('T')[0] } : p
-      );
-      localStorage.setItem('researchflow_papers', JSON.stringify(updatedPapers));
-      setLastSaved(new Date());
-      setSaveStatus('saved');
-      
-      // Auto-hide saved status after 2 seconds
-      setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
-    }
-  };
-
   const handleAiResult = (task: string, data: any) => {
     setAiResults(prev => ({ ...prev, [task]: data }));
   };
@@ -112,9 +92,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
     // This will be handled by the ContentEditor component
   };
 
-  const handleContentChange = (updatedPaper: Paper) => {
-    setPaper(updatedPaper);
-    handleSave();
+  const handleSaveStatusChange = (status: 'idle' | 'saving' | 'saved') => {
+    setGlobalSaveStatus(status);
   };
 
   if (isLoading) {
@@ -165,14 +144,11 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
                   </h1>
                   <div className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                     <Badge variant="secondary" className="text-xs">{paper.type}</Badge>
-                    {saveStatus === 'saving' && (
+                    {globalSaveStatus === 'saving' && (
                       <span className="text-blue-600 dark:text-blue-400">Saving...</span>
                     )}
-                    {saveStatus === 'saved' && (
+                    {globalSaveStatus === 'saved' && (
                       <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>
-                    )}
-                    {saveStatus === 'idle' && lastSaved && (
-                      <span>Last saved {lastSaved.toLocaleTimeString()}</span>
                     )}
                   </div>
                 </div>
@@ -180,12 +156,12 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" onClick={() => setShowAiFeedback(true)}>
+              <Button variant="ghost" size="sm">
                 <Brain className="w-4 h-4 mr-2" />
                 AI Feedback
               </Button>
               
-              <Button variant="ghost" size="sm" onClick={handleSave}>
+              <Button variant="ghost" size="sm">
                 <Save className="w-4 h-4 mr-2" />
                 Save
               </Button>
@@ -232,8 +208,9 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               <ContentEditor
                 activeSection={activeSection}
                 paper={paper}
-                onUpdate={handleContentChange}
+                onUpdate={() => {}} // Not needed anymore with localStorage
                 onAiResult={handleAiResult}
+                onSaveStatusChange={handleSaveStatusChange}
               />
             </TabsContent>
 
