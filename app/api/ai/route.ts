@@ -125,6 +125,8 @@ The consensus points toward hybrid approaches that combine AI assistance with tr
       revised: bullets || "• Key point extracted from content\n• Additional supporting detail\n• Concluding observation"
     });
   }
+
+  // Existing tasks
   if (task === "organize") {
     return NextResponse.json({
       outline: `# ${field || "Research Study"}
