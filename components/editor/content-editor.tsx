@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { 
   Bold, 
@@ -28,7 +29,9 @@ import {
   Clock,
   History,
   Eye,
-  RotateCcw
+  RotateCcw,
+  HelpCircle,
+  Save
 } from 'lucide-react';
 
 interface Version {
@@ -50,57 +53,90 @@ const sectionContent: { [key: string]: { title: string; placeholder: string; gui
   abstract: {
     title: 'Abstract',
     placeholder: 'Write a concise summary of your research (150-250 words)...',
-    guidance: 'Include: purpose, methods, key findings, and conclusions. Keep it under 250 words.'
+    guidance: 'Include: purpose, methods, key findings, and conclusions. Keep it under 250 words.',
+    wordTarget: 250,
+    emptyGuidance: 'Start with your research purpose, then briefly describe methods, key findings, and conclusions.',
+    rubric: 'A good abstract includes: (1) Clear research purpose/question, (2) Brief methodology, (3) Key findings/results, (4) Main conclusions/implications. Keep it concise and self-contained.'
   },
   introduction: {
     title: 'Introduction',
     placeholder: 'Introduce your research topic and establish its significance...',
-    guidance: 'Start broad, then narrow to your specific research question. Include background, problem statement, and objectives.'
+    guidance: 'Start broad, then narrow to your specific research question. Include background, problem statement, and objectives.',
+    wordTarget: 800,
+    emptyGuidance: 'Begin with broad context, narrow to your specific problem, state objectives and research questions.',
+    rubric: 'Structure: (1) Broad context and importance, (2) Specific problem/gap, (3) Research objectives, (4) Research questions/hypotheses, (5) Brief overview of approach.'
   },
   'intro-background': {
     title: 'Background',
     placeholder: 'Provide context and background information for your research...',
-    guidance: 'Establish the broader context of your research area.'
+    guidance: 'Establish the broader context of your research area.',
+    wordTarget: 400,
+    emptyGuidance: 'Provide essential context and background that readers need to understand your research.',
+    rubric: 'Cover key concepts, historical context, and current state of knowledge in your research area.'
   },
   'intro-problem': {
     title: 'Problem Statement',
     placeholder: 'Clearly articulate the problem your research addresses...',
-    guidance: 'Define the specific issue or gap your research will address.'
+    guidance: 'Define the specific issue or gap your research will address.',
+    wordTarget: 300,
+    emptyGuidance: 'Clearly define the specific problem, gap, or question your research addresses.',
+    rubric: 'Be specific about what problem exists, why it matters, and what gap your research fills.'
   },
   'intro-objectives': {
     title: 'Research Objectives',
     placeholder: 'State your research objectives and hypotheses...',
-    guidance: 'List clear, measurable objectives for your study.'
+    guidance: 'List clear, measurable objectives for your study.',
+    wordTarget: 200,
+    emptyGuidance: 'List 3-5 clear, measurable objectives that your research aims to achieve.',
+    rubric: 'Objectives should be specific, measurable, achievable, relevant, and time-bound (SMART).'
   },
   'literature-review': {
     title: 'Literature Review',
     placeholder: 'Review and synthesize relevant literature...',
-    guidance: 'Organize by themes, chronologically, or methodologically. Show gaps your research will fill.'
+    guidance: 'Organize by themes, chronologically, or methodologically. Show gaps your research will fill.',
+    wordTarget: 1500,
+    emptyGuidance: 'Synthesize existing research by themes, identify patterns, and highlight gaps your study addresses.',
+    rubric: 'Organize by themes or chronology. Critically analyze sources, identify patterns and contradictions, and clearly establish the gap your research fills.'
   },
   methodology: {
     title: 'Methodology',
     placeholder: 'Describe your research methods and approach...',
-    guidance: 'Be detailed enough for replication. Include design, participants, procedures, and analysis methods.'
+    guidance: 'Be detailed enough for replication. Include design, participants, procedures, and analysis methods.',
+    wordTarget: 1000,
+    emptyGuidance: 'Specify research design, participants/sample, data collection procedures, and analysis methods.',
+    rubric: 'Include: (1) Research design and rationale, (2) Participants/sample, (3) Materials/instruments, (4) Procedures, (5) Data analysis plan. Be detailed enough for replication.'
   },
   results: {
     title: 'Results',
     placeholder: 'Present your findings objectively...',
-    guidance: 'Report results without interpretation. Use tables, figures, and statistical analysis.'
+    guidance: 'Report results without interpretation. Use tables, figures, and statistical analysis.',
+    wordTarget: 800,
+    emptyGuidance: 'Present findings objectively with tables, figures, and statistical results. No interpretation here.',
+    rubric: 'Report findings objectively without interpretation. Use clear tables/figures, report statistical tests, and organize by research questions.'
   },
   discussion: {
     title: 'Discussion',
     placeholder: 'Interpret your results and discuss their implications...',
-    guidance: 'Explain what your results mean, compare with existing literature, and discuss implications.'
+    guidance: 'Explain what your results mean, compare with existing literature, and discuss implications.',
+    wordTarget: 1200,
+    emptyGuidance: 'Interpret results, compare with existing literature, discuss implications and limitations.',
+    rubric: 'Structure: (1) Interpretation of key findings, (2) Comparison with existing literature, (3) Implications for theory/practice, (4) Limitations, (5) Future research directions.'
   },
   conclusion: {
     title: 'Conclusion',
     placeholder: 'Summarize your research and its contributions...',
-    guidance: 'Summarize key findings, contributions to knowledge, and suggestions for future research.'
+    guidance: 'Summarize key findings, contributions to knowledge, and suggestions for future research.',
+    wordTarget: 400,
+    emptyGuidance: 'Summarize key findings, state contributions to knowledge, and suggest future research directions.',
+    rubric: 'Concisely summarize main findings, highlight contributions to knowledge, and suggest specific directions for future research.'
   },
   references: {
     title: 'References',
     placeholder: 'Your references will appear here automatically...',
-    guidance: 'References are generated from your sources. Use proper citation format.'
+    guidance: 'References are generated from your sources. Use proper citation format.',
+    wordTarget: 0,
+    emptyGuidance: 'References will be automatically generated from your citation manager.',
+    rubric: 'Follow consistent citation style (APA, MLA, etc.). Ensure all in-text citations have corresponding references.'
   }
 };
 
@@ -117,11 +153,15 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedText, setSelectedText] = useState('');
+  const [showRubric, setShowRubric] = useState(false);
 
   const section = sectionContent[activeSection] || {
     title: 'Section',
     placeholder: 'Start writing...',
-    guidance: 'Write your content here.'
+    guidance: 'Write your content here.',
+    wordTarget: 500,
+    emptyGuidance: 'Start writing your content here.',
+    rubric: 'Write clear, well-structured content for this section.'
   };
 
   // Load content and versions on section change
@@ -230,6 +270,25 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
     setSelectedText(selected);
   };
 
+  const handleManualSave = useCallback(() => {
+    const currentContent = editorRef.current?.textContent || content || '';
+    saveDraft(activeSection, currentContent);
+    toast.success('Changes saved manually');
+  }, [activeSection, content, saveDraft]);
+
+  // Keyboard shortcut for manual save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        handleManualSave();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleManualSave]);
+
   const handleSuggestCitationsForSelection = async () => {
     if (!selectedText) {
       toast.error('Please select some text first');
@@ -335,11 +394,20 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
   return (
     <div className="h-full flex flex-col">
       {/* Section Header */}
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-16 z-30">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
+              
+              {/* Word Count */}
+              <div className="text-sm text-slate-600 dark:text-slate-300">
+                <span className="font-medium">{wordCount}</span>
+                {section.wordTarget > 0 && (
+                  <span className="text-slate-400 dark:text-slate-500">/{section.wordTarget}</span>
+                )}
+                <span className="ml-1 text-slate-400 dark:text-slate-500">words</span>
+              </div>
               
               {/* Versions Dropdown */}
               <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
@@ -391,6 +459,25 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              
+              {/* Help Icon */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setShowRubric(true)}
+                    >
+                      <HelpCircle className="w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Writing guidelines for {section.title}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{section.guidance}</p>
           </div>
@@ -404,10 +491,6 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
               {saveStatus === 'saved' && (
                 <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>
               )}
-            </div>
-            
-            <div className="text-sm text-slate-600 dark:text-slate-300">
-              <span className="font-medium">{wordCount}</span> words
             </div>
             
             <div className="flex items-center space-x-2 border-r border-slate-200 dark:border-slate-700 pr-4">
@@ -489,7 +572,12 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-              
+            
+            <Button variant="outline" size="sm" onClick={handleManualSave}>
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+            
             <Button variant="outline" size="sm">
               <BookOpen className="w-4 h-4 mr-2" />
               Add Citation
@@ -519,7 +607,7 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
       </div>
 
       {/* Toolbar */}
-      <div className="px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-32 z-20">
         <div className="flex items-center space-x-1">
           <Button variant="ghost" size="sm" onClick={() => formatText('bold')}>
             <Bold className="w-4 h-4" />
@@ -565,18 +653,35 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
 
       {/* Editor */}
       <div className="flex-1 p-6 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[820px] mx-auto">
+          {/* Empty State Guidance */}
+          {wordCount === 0 && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start space-x-3">
+                <Target className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    Getting Started with {section.title}
+                  </h4>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    {section.emptyGuidance}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Content Area */}
           <div
             ref={editorRef}
             contentEditable
-            className="min-h-[500px] p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="min-h-[500px] p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 leading-[1.75]"
             onInput={handleContentChange}
             onMouseUp={handleTextSelection}
             onKeyUp={handleTextSelection}
             style={{
               fontSize: '16px',
-              lineHeight: '1.6',
+              lineHeight: '1.75',
               color: 'inherit'
             }}
             data-placeholder={section.placeholder}
@@ -659,6 +764,44 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
         </DialogContent>
       </Dialog>
 
+      {/* Rubric Modal */}
+      <Dialog open={showRubric} onOpenChange={setShowRubric}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <HelpCircle className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+              Writing Guidelines: {section.title}
+            </DialogTitle>
+            <DialogDescription>
+              Best practices and structure for this section
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <h4 className="font-medium text-slate-900 dark:text-white mb-2">Structure & Content</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {section.rubric}
+              </p>
+            </div>
+            
+            {section.wordTarget > 0 && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Target Length</h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Aim for approximately {section.wordTarget} words for this section.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end">
+            <Button onClick={() => setShowRubric(false)}>
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <style jsx>{`
         [contenteditable]:empty:before {
           content: attr(data-placeholder);
