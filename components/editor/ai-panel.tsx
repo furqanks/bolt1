@@ -349,17 +349,23 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
                           {citation.journal}
                         </p>
                       )}
-                      <p className="text-xs text-slate-600 dark:text-slate-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                        {citation.relevance}
-                      </p>
+                      {citation.relevance && (
+                        <p className="text-xs text-slate-600 dark:text-slate-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                          {citation.relevance}
+                        </p>
+                      )}
                       <div className="flex items-center space-x-2 pt-2">
                         <Button size="sm" variant="outline" className="text-xs h-7">
                           <Plus className="w-3 h-3 mr-1" />
                           Add to Sources
                         </Button>
-                        <Button size="sm" variant="ghost" className="text-xs h-7">
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
+                        {(citation.url || citation.doi) && (
+                          <Button size="sm" variant="ghost" className="text-xs h-7" asChild>
+                            <a href={citation.url || `https://doi.org/${citation.doi}`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
