@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { 
   Plus, 
   Search, 
@@ -17,7 +18,9 @@ import {
   Edit, 
   Trash2,
   Download,
-  Filter
+  Filter,
+  FileText,
+  Link as LinkIcon
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -75,6 +78,8 @@ export function CitationManager({ paperId }: CitationManagerProps) {
   const [editingSource, setEditingSource] = useState<Source | null>(null);
   const [doiInput, setDoiInput] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [bibtexInput, setBibtexInput] = useState('');
+  const [showBibtexModal, setShowBibtexModal] = useState(false);
   const [newSource, setNewSource] = useState<Partial<Source>>({
     type: 'journal',
     title: '',
@@ -140,6 +145,68 @@ export function CitationManager({ paperId }: CitationManagerProps) {
       notes: ''
     });
     setShowAddSource(false);
+  };
+
+  const parseBibtex = (bibtex: string) => {
+    // Basic BibTeX parsing - extract common fields
+    const entry: Partial<Source> = { type: 'journal' };
+    
+    // Extract entry type
+    const typeMatch = bibtex.match(/@(\w+)\s*\{/i);
+    if (typeMatch) {
+      const bibType = typeMatch[1].toLowerCase();
+      if (bibType === 'article') entry.type = 'journal';
+      else if (bibType === 'book') entry.type = 'book';
+      else if (bibType === 'inproceedings') entry.type = 'conference';
+      else if (bibType === 'misc' || bibType === 'online') entry.type = 'website';
+    }
+    
+    // Extract fields using regex
+    const extractField = (field: string) => {
+      const regex = new RegExp(`${field}\\s*=\\s*[{"']([^}"']+)[}"']`, 'i');
+      const match = bibtex.match(regex);
+      return match ? match[1].trim() : '';
+    };
+    
+    entry.title = extractField('title');
+    entry.author = extractField('author');
+    entry.year = extractField('year');
+    entry.journal = extractField('journal');
+    entry.publisher = extractField('publisher');
+    entry.volume = extractField('volume');
+    entry.pages = extractField('pages');
+    entry.doi = extractField('doi');
+    entry.url = extractField('url');
+    
+    return entry;
+  };
+
+  const handleBibtexImport = () => {
+    if (!bibtexInput.trim()) {
+      toast.error('Please paste BibTeX content');
+      return;
+    }
+    
+    try {
+      const parsed = parseBibtex(bibtexInput);
+      if (!parsed.title) {
+        toast.error('Could not parse BibTeX - please check the format');
+        return;
+      }
+      
+      setNewSource({
+        ...parsed,
+        notes: 'Imported from BibTeX'
+      });
+      
+      setBibtexInput('');
+      setShowBibtexModal(false);
+      setShowAddSource(true);
+      toast.success('BibTeX parsed successfully! Review and save the source.');
+    } catch (error) {
+      console.error('BibTeX parsing failed:', error);
+      toast.error('Failed to parse BibTeX. Please check the format.');
+    }
   };
 
   const handleDeleteSource = (id: string) => {
@@ -250,6 +317,11 @@ export function CitationManager({ paperId }: CitationManagerProps) {
         </div>
 
         <div className="flex items-center space-x-3">
+          <Button variant="outline" onClick={() => setShowBibtexModal(true)}>
+            <FileText className="w-4 h-4 mr-2" />
+            Import BibTeX
+          </Button>
+          
           <Select value={citationFormat} onValueChange={setCitationFormat}>
             <SelectTrigger className="w-32">
               <SelectValue />
@@ -417,8 +489,11 @@ export function CitationManager({ paperId }: CitationManagerProps) {
       </div>
 
       {/* DOI Import */}
-      <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-        <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Quick Import</h3>
+      <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center">
+          <LinkIcon className="w-4 h-4 mr-2" />
+          Import by DOI
+        </h3>
         <div className="flex items-center space-x-3">
           <div className="flex-1">
             <Input
@@ -433,7 +508,7 @@ export function CitationManager({ paperId }: CitationManagerProps) {
             disabled={isImporting || !doiInput.trim()}
             className="bg-blue-600 hover:bg-blue-700"
           >
-            {isImporting ? 'Importing...' : 'Import by DOI'}
+            {isImporting ? 'Resolving...' : 'Import'}
           </Button>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -576,6 +651,52 @@ export function CitationManager({ paperId }: CitationManagerProps) {
           </div>
         )}
       </div>
+
+      {/* BibTeX Import Modal */}
+      <Dialog open={showBibtexModal} onOpenChange={setShowBibtexModal}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <FileText className="w-5 h-5 mr-2" />
+              Import from BibTeX
+            </DialogTitle>
+            <DialogDescription>
+              Paste your BibTeX entry below and we'll extract the citation information.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bibtex">BibTeX Entry</Label>
+              <Textarea
+                id="bibtex"
+                placeholder="@article{smith2023,
+  title={Sample Article Title},
+  author={Smith, John and Doe, Jane},
+  journal={Journal Name},
+  year={2023},
+  volume={45},
+  pages={123--145},
+  doi={10.1000/xyz}
+}"
+                value={bibtexInput}
+                onChange={(e) => setBibtexInput(e.target.value)}
+                rows={8}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBibtexModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBibtexImport} disabled={!bibtexInput.trim()}>
+              Parse & Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

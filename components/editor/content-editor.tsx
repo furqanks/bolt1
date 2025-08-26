@@ -116,6 +116,7 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedText, setSelectedText] = useState('');
 
   const section = sectionContent[activeSection] || {
     title: 'Section',
@@ -220,6 +221,44 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
       setShowVersions(false);
       setPreviewVersion(null);
       toast.success('Version restored successfully');
+    }
+  };
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    const selected = selection?.toString().trim() || '';
+    setSelectedText(selected);
+  };
+
+  const handleSuggestCitationsForSelection = async () => {
+    if (!selectedText) {
+      toast.error('Please select some text first');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          task: 'suggest_citations', 
+          sectionText: selectedText,
+          field: paper?.topic || 'research'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to suggest citations');
+      }
+
+      // Send results to AI panel
+      onAiResult('suggest_citations', data);
+      toast.success(`Found ${data.citations?.length || 0} citation suggestions for selected text`);
+    } catch (error) {
+      console.error('Citation suggestion failed:', error);
+      toast.error('Failed to suggest citations. Please try again.');
     }
   };
 
@@ -533,6 +572,8 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
             contentEditable
             className="min-h-[500px] p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             onInput={handleContentChange}
+            onMouseUp={handleTextSelection}
+            onKeyUp={handleTextSelection}
             style={{
               fontSize: '16px',
               lineHeight: '1.6',
@@ -573,6 +614,18 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Your work is automatically saved. Last saved 2 minutes ago.
               </p>
+              
+              {selectedText && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSuggestCitationsForSelection}
+                  className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Suggest Citations for Selection
+                </Button>
+              )}
             </div>
           </div>
         </div>
