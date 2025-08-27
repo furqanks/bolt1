@@ -47,6 +47,7 @@ interface ContentEditorProps {
   onUpdate: (paper: any) => void;
   onAiResult: (type: string, data: any) => void;
   onSaveStatusChange?: (status: 'idle' | 'saving' | 'saved') => void;
+  onAddCitation?: () => void;
 }
 
 const sectionContent: { [key: string]: { title: string; placeholder: string; guidance: string } } = {
@@ -140,7 +141,7 @@ const sectionContent: { [key: string]: { title: string; placeholder: string; gui
   }
 };
 
-export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSaveStatusChange }: ContentEditorProps) {
+export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSaveStatusChange, onAddCitation }: ContentEditorProps) {
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -578,7 +579,7 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
               Save
             </Button>
             
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={onAddCitation}>
               <BookOpen className="w-4 h-4 mr-2" />
               Add Citation
             </Button>

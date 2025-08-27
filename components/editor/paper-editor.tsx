@@ -58,6 +58,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [currentAiTask, setCurrentAiTask] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [globalSaveStatus, setGlobalSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [activeTab, setActiveTab] = useState<'write' | 'sources' | 'settings'>('write');
 
   useEffect(() => {
     if (!user) {
@@ -194,8 +195,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className={`flex-1 flex flex-col ${aiPanelCollapsed ? '' : 'mr-0'}`}>
-          <Tabs defaultValue="write" className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
             <div className="border-b border-slate-200 dark:border-slate-700 px-6">
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="write">Write</TabsTrigger>
@@ -211,6 +212,10 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
                 onUpdate={() => {}} // Not needed anymore with localStorage
                 onAiResult={handleAiResult}
                 onSaveStatusChange={handleSaveStatusChange}
+                onAddCitation={() => {
+                  setActiveTab('sources');
+                  window.dispatchEvent(new CustomEvent('open-add-source'));
+                }}
               />
             </TabsContent>
 

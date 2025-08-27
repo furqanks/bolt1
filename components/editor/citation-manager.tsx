@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -93,6 +93,12 @@ export function CitationManager({ paperId }: CitationManagerProps) {
     doi: '',
     notes: ''
   });
+
+  useEffect(() => {
+    const handler = () => setShowAddSource(true);
+    window.addEventListener('open-add-source', handler);
+    return () => window.removeEventListener('open-add-source', handler);
+  }, []);
 
   const formatCitation = (source: Source, format: 'apa' | 'mla' = 'apa') => {
     if (format === 'apa') {
