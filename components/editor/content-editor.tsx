@@ -156,6 +156,36 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
   const [selectedText, setSelectedText] = useState('');
   const [showRubric, setShowRubric] = useState(false);
 
+  // Insert citation at cursor position
+  useEffect(() => {
+    const handler = (e: any) => {
+      const inline = e?.detail?.inline;
+      if (!inline) return;
+      const sel = window.getSelection?.();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(` ${inline} `));
+        sel.removeAllRanges();
+        const newRange = document.createRange();
+        if (editorRef.current?.lastChild) {
+          newRange.setStartAfter(editorRef.current.lastChild);
+          newRange.collapse(true);
+          sel.addRange(newRange);
+        }
+      } else if (editorRef.current) {
+        editorRef.current.innerText += ` ${inline}`;
+      }
+      editorRef.current?.focus();
+      
+      // Trigger content change to update word count and save
+      const event = new Event('input', { bubbles: true });
+      editorRef.current?.dispatchEvent(event);
+    };
+    window.addEventListener('insert-citation', handler as any);
+    return () => window.removeEventListener('insert-citation', handler as any);
+  }, []);
+
   const section = sectionContent[activeSection] || {
     title: 'Section',
     placeholder: 'Start writing...',

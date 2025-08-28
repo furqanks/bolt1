@@ -60,6 +60,28 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [globalSaveStatus, setGlobalSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [activeTab, setActiveTab] = useState<'write' | 'sources' | 'settings'>('write');
 
+  // Handle adding reference entries to References section
+  useEffect(() => {
+    const handler = (e: any) => {
+      const entry = e?.detail?.entry;
+      if (!entry) return;
+      
+      // Find and update the references section in localStorage
+      if (paper?.id) {
+        const referencesKey = `paper_${paper.id}_section_references`;
+        const currentContent = localStorage.getItem(referencesKey) || '';
+        const separator = currentContent.trim() ? '\n\n' : '';
+        const updatedContent = currentContent + separator + entry;
+        localStorage.setItem(referencesKey, updatedContent);
+      }
+      
+      // Switch to write tab to show the update
+      setActiveTab('write');
+    };
+    window.addEventListener('add-reference-entry', handler as any);
+    return () => window.removeEventListener('add-reference-entry', handler as any);
+  }, [paper?.id]);
+
   useEffect(() => {
     if (!user) {
       router.push('/login');

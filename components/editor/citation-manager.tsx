@@ -24,6 +24,24 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
+function makeInlineFrom(s: any) {
+  const year = s.year || s.date?.slice(0,4) || "n.d.";
+  const authors = Array.isArray(s.authors) ? s.authors : (s.author ? [s.author] : []);
+  const first = authors[0] || s.title || "Anon";
+  const last = String(first).split(",")[0].trim();
+  return `(${last}${authors.length > 1 ? " et al." : ""}, ${year})`;
+}
+
+function buildAPAFrom(s: any) {
+  if (s.apa) return s.apa;
+  const year = s.year || "n.d.";
+  const title = s.title || "Untitled";
+  const authors = Array.isArray(s.authors) ? s.authors.join(", ") : (s.author || "Anonymous");
+  const container = s.journal || s.publisher || s.container || "";
+  const doi = s.doi ? ` https://doi.org/${s.doi}` : (s.url ? ` ${s.url}` : "");
+  return `${authors} (${year}). ${title}. ${container}.${doi}`;
+}
+
 interface Source {
   id: string;
   type: 'book' | 'journal' | 'website' | 'conference' | 'thesis' | 'other';
@@ -644,10 +662,26 @@ export function CitationManager({ paperId }: CitationManagerProps) {
                   )}
                   
                   <div className="flex items-center space-x-4 mt-4">
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        const inline = source.inline || makeInlineFrom(source);
+                        window.dispatchEvent(new CustomEvent('insert-citation', { detail: { inline } }));
+                        toast.success('Citation inserted into text');
+                      }}
+                    >
                       Insert Citation
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        const entry = source.apa || buildAPAFrom(source);
+                        window.dispatchEvent(new CustomEvent('add-reference-entry', { detail: { entry } }));
+                        toast.success('Reference added to bibliography');
+                      }}
+                    >
                       Add to Paper
                     </Button>
                   </div>
