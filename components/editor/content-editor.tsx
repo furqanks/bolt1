@@ -151,40 +151,111 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
   const [showVersions, setShowVersions] = useState(false);
   const [previewVersion, setPreviewVersion] = useState<Version | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [showRubric, setShowRubric] = useState(false);
 
-  // Insert citation at cursor position
+  function isInsideEditor(node: Node | null) {
+    if (!node || !editorRef.current) return false;
+    return editorRef.current.contains(node);
+  }
+
+  // Capture selection whenever the user clicks/types in the editor
+  useEffect(() => {
+    function saveSelection() {
+      const sel = window.getSelection && window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        if (isInsideEditor(range.startContainer)) {
+          // clone so it survives DOM updates
+          savedRangeRef.current = range.cloneRange();
+        }
+      }
+    }
+
+    const ed = editorRef.current;
+    if (!ed) return;
+
+    // Save on common events
+    ed.addEventListener('keyup', saveSelection);
+    ed.addEventListener('mouseup', saveSelection);
+    ed.addEventListener('input', saveSelection);
+
+    // Fallback: global selectionchange while editor is focused
+    const onSelChange = () => {
+      if (document.activeElement === ed) saveSelection();
+    };
+    document.addEventListener('selectionchange', onSelChange);
+
+    return () => {
+      ed.removeEventListener('keyup', saveSelection);
+      ed.removeEventListener('mouseup', saveSelection);
+      ed.removeEventListener('input', saveSelection);
+      document.removeEventListener('selectionchange', onSelChange);
+    };
+  }, []);
+
+  // Focus handler
+  useEffect(() => {
+    const focusHandler = () => {
+      editorRef.current?.focus();
+    };
+    window.addEventListener('editor-focus', focusHandler as any);
+    return () => window.removeEventListener('editor-focus', focusHandler as any);
+  }, []);
+
+  // Insert citation handler
   useEffect(() => {
     const handler = (e: any) => {
       const inline = e?.detail?.inline;
-      if (!inline) return;
+      if (!inline || !editorRef.current) return;
+
       const sel = window.getSelection?.();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
+      // If we have a saved caret from earlier, restore it
+      if (savedRangeRef.current && sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+
+      // After restoring, insert at current selection if inside editor
+      const sel2 = window.getSelection?.();
+      if (sel2 && sel2.rangeCount > 0 && isInsideEditor(sel2.getRangeAt(0).startContainer)) {
+        const range = sel2.getRangeAt(0);
         range.deleteContents();
         range.insertNode(document.createTextNode(` ${inline} `));
-        sel.removeAllRanges();
+
+        // place caret after inserted text
+        sel2.removeAllRanges();
         const newRange = document.createRange();
-        if (editorRef.current?.lastChild) {
+        if (editorRef.current.lastChild) {
           newRange.setStartAfter(editorRef.current.lastChild);
           newRange.collapse(true);
-          sel.addRange(newRange);
+          sel2.addRange(newRange);
         }
-      } else if (editorRef.current) {
+      } else {
+        // fallback: append at end of editor
         editorRef.current.innerText += ` ${inline}`;
       }
-      editorRef.current?.focus();
+
+      editorRef.current.focus();
+      // update saved range again after insertion
+      const sel3 = window.getSelection?.();
+      if (sel3 && sel3.rangeCount > 0) {
+        savedRangeRef.current = sel3.getRangeAt(0).cloneRange();
+      }
       
       // Trigger content change to update word count and save
       const event = new Event('input', { bubbles: true });
       editorRef.current?.dispatchEvent(event);
     };
-    window.addEventListener('insert-citation', handler as any);
-    return () => window.removeEventListener('insert-citation', handler as any);
+
+    window.addEventListener('editor-insert-citation', handler as any);
+    return () => window.removeEventListener('editor-insert-citation', handler as any);
   }, []);
+
+  // Insert citation at cursor position
 
   const section = sectionContent[activeSection] || {
     title: 'Section',

@@ -83,6 +83,22 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   }, [paper?.id]);
 
   useEffect(() => {
+    const handler = (e: any) => {
+      const inline = e?.detail?.inline;
+      if (!inline) return;
+      // 1) switch to Write so the editor mounts
+      setActiveTab('write');
+      // 2) give React a tick to mount, then forward to the editor
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('editor-focus'));
+        window.dispatchEvent(new CustomEvent('editor-insert-citation', { detail: { inline } }));
+      }, 80);
+    };
+    window.addEventListener('request-insert-citation', handler as any);
+    return () => window.removeEventListener('request-insert-citation', handler as any);
+  }, []);
+
+  useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
