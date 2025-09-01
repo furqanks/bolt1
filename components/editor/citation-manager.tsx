@@ -42,23 +42,6 @@ function buildAPAFrom(s: any) {
   return `${authors} (${year}). ${title}. ${container}.${doi}`;
 }
 
-function makeInlineFrom(s: any) {
-  const year = s.year || s.date?.slice(0,4) || "n.d.";
-  const authors = Array.isArray(s.authors) ? s.authors : (s.author ? [s.author] : []);
-  const first = authors[0] || s.title || "Anon";
-  const last = String(first).split(",")[0].trim();
-  return `(${last}${authors.length > 1 ? " et al." : ""}, ${year})`;
-}
-
-function buildAPAFrom(s: any) {
-  if (s.apa) return s.apa;
-  const year = s.year || "n.d.";
-  const title = s.title || "Untitled";
-  const authors = Array.isArray(s.authors) ? s.authors.join(", ") : (s.author || "Anonymous");
-  const container = s.journal || s.publisher || s.container || "";
-  const doi = s.doi ? ` https://doi.org/${s.doi}` : (s.url ? ` ${s.url}` : "");
-  return `${authors} (${year}). ${title}. ${container}.${doi}`;
-}
 
 interface Source {
   id: string;
