@@ -152,8 +152,8 @@ export function CitationManager({ paperId }: CitationManagerProps) {
     const source: Source = {
       id: Date.now().toString(),
       citationKey: `${newSource.author?.toLowerCase().split(',')[0].trim()}${newSource.year}${newSource.title?.toLowerCase().split(' ')[0]}`,
-      ...newSource as Source
-    };
+      ...newSource
+    } as Source;
 
     setSources([source, ...sources]);
     setNewSource({
