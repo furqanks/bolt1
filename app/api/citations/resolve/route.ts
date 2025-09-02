@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   ];
 
   // Select response based on DOI hash for consistency
-  const index = doi.split('').reduce((acc: number, char) => acc + char.charCodeAt(0), 0) % mockResponses.length;
+  const index = doi.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % mockResponses.length;
   const metadata = mockResponses[index];
 
   return NextResponse.json({ metadata });
