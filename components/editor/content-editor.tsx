@@ -34,6 +34,15 @@ import {
   Save
 } from 'lucide-react';
 
+interface SectionConfig {
+  title: string;
+  placeholder: string;
+  guidance: string;
+  wordTarget?: number;
+  emptyGuidance?: string;
+  rubric?: string;
+}
+
 interface Version {
   id: string;
   timestamp: Date;
@@ -50,7 +59,7 @@ interface ContentEditorProps {
   onAddCitation?: () => void;
 }
 
-const sectionContent: { [key: string]: { title: string; placeholder: string; guidance: string } } = {
+const sectionContent: Record<string, SectionConfig> = {
   abstract: {
     title: 'Abstract',
     placeholder: 'Write a concise summary of your research (150-250 words)...',
