@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { dev }) => {
-    if (!dev && (process.env.CI === 'true' || process.env.NEXT_DISABLE_WEBPACK_CACHE === '1')) {
-      config.cache = false;
-    }
+    // Turn off FS cache to avoid rename errors in Bolt publish containers
+    config.cache = false;
     return config;
   },
   eslint: {
