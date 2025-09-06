@@ -901,7 +901,7 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Target Length</h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   Aim for approximately {section.wordTarget} words for this section.
-            {(section.wordTarget ?? 0) > 0 && (
+                </p>
               </div>
             )}
           </div>
