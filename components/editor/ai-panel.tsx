@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
-  X, 
   ChevronLeft, 
   ChevronRight,
   Lightbulb,
@@ -36,7 +35,13 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
   if (isCollapsed) {
     return (
-      <div className="w-12 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col">
+      <div
+        className="
+          w-12 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
+          flex flex-col
+          max-h-[calc(100vh-64px)] overflow-y-auto   /* <-- ensure collapsed rail never overflows the viewport */
+        "
+      >
         <Button
           variant="ghost"
           size="sm"
@@ -55,7 +60,13 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
   }
 
   return (
-    <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col">
+    <div
+      className="
+        w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
+        flex flex-col
+        max-h-[calc(100vh-64px)] overflow-y-auto   /* <-- the whole panel fits under the sticky header and scrolls internally */
+      "
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
         <h3 className="font-semibold text-slate-900 dark:text-white">AI Assistant</h3>
@@ -65,14 +76,22 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 min-h-0 flex flex-col"    /* <-- min-h-0 lets inner tab content actually scroll */
+      >
         <TabsList className="grid w-full grid-cols-3 m-4 mb-0">
           <TabsTrigger value="actions">Actions</TabsTrigger>
           <TabsTrigger value="suggestions">Results</TabsTrigger>
           <TabsTrigger value="references">References</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="actions" className="flex-1 p-4 space-y-4 mt-4">
+        {/* Actions can get long too → make it scrollable */}
+        <TabsContent
+          value="actions"
+          className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto"
+        >
           {/* Ideate Section */}
           <Card>
             <CardHeader className="pb-3">
@@ -240,7 +259,8 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           )}
         </TabsContent>
 
-        <TabsContent value="suggestions" className="flex-1 p-4 space-y-4 mt-4 overflow-y-auto">
+        {/* Results tab is already scrollable; add min-h-0 to be safe */}
+        <TabsContent value="suggestions" className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto">
           {Object.keys(aiResults).length === 0 ? (
             <div className="text-center py-8">
               <Target className="w-8 h-8 text-slate-400 mx-auto mb-3" />
@@ -331,7 +351,8 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           )}
         </TabsContent>
 
-        <TabsContent value="references" className="flex-1 p-4 space-y-4 mt-4 overflow-y-auto">
+        {/* References tab already scrolls; add min-h-0 too */}
+        <TabsContent value="references" className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto">
           {aiResults.suggest_citations?.citations ? (
             <div className="space-y-3">
               {aiResults.suggest_citations.citations.map((citation: any, i: number) => (
