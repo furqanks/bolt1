@@ -764,7 +764,7 @@ export function ContentEditor({ activeSection, paper, onUpdate, onAiResult, onSa
 
       {/* Editor */}
       <div className="flex-1 p-6 overflow-y-auto">
-        <div className="max-w-[820px] mx-auto">
+        <div className="max-w-3xl mx-auto w-full">
           {/* Empty State Guidance */}
           {wordCount === 0 && (
             <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
