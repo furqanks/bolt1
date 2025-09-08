@@ -223,8 +223,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-64px)]">
-        {/* Sidebar - Outline */}
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+        {/* Sidebar */}
         <div className="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
           <OutlinePanel
             activeSection={activeSection}
@@ -233,8 +233,12 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <Tabs   value={activeTab}   onValueChange={(v) => setActiveTab(v as any)}   className="flex-1 min-h-0 flex flex-col" >
+        <div className="flex-1 flex flex-col min-h-0">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as any)}
+            className="flex-1 flex flex-col min-h-0"
+          >
             <div className="border-b border-slate-200 dark:border-slate-700 px-6">
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="write">Write</TabsTrigger>
@@ -243,7 +247,10 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               </TabsList>
             </div>
 
-            <TabsContent value="write" className="flex-1 min-h-0 mt-0 overflow-y-auto">
+            <TabsContent
+              value="write"
+              className="flex-1 overflow-y-auto min-h-0"
+            >
               <ContentEditor
                 activeSection={activeSection}
                 paper={paper}
@@ -257,11 +264,17 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               />
             </TabsContent>
 
-            <TabsContent value="sources" className="flex-1 min-h-0 mt-0 overflow-y-auto">
+            <TabsContent
+              value="sources"
+              className="flex-1 overflow-y-auto min-h-0"
+            >
               <CitationManager paperId={paperId} />
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 min-h-0 mt-0 overflow-y-auto p-6">
+            <TabsContent
+              value="settings"
+              className="flex-1 overflow-y-auto min-h-0 p-6"
+            >
               <div className="max-w-2xl">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Paper Settings</h3>
                 
