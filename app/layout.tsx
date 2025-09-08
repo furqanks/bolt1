@@ -15,7 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      {/* Give body minimal height + theme colors; do NOT add overflow-hidden */}
+      <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
           {children}
           <Toaster position="top-right" />
