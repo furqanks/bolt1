@@ -83,3 +83,12 @@
     font-family: 'Inter', sans-serif;
   }
 }
+/* ---- Layout fixes so pages fit and scroll correctly ---- */
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  overflow-y: auto;   /* allow vertical scrolling */
+  overflow-x: hidden; /* prevent horizontal scrollbars */
+}
