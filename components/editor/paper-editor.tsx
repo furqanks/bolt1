@@ -225,7 +225,7 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
 
       <div className="flex h-[calc(100vh-64px)] overflow-x-hidden">
         {/* Sidebar */}
-        <div className="w-80 shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
+        <div className="w-80 shrink-0 min-w-[18rem] max-w-[20rem] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
           <OutlinePanel
             activeSection={activeSection}
             onSectionChange={setActiveSection}

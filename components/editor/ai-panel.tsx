@@ -37,7 +37,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
     return (
       <div
         className="
-          w-12 shrink-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
+          w-12 shrink-0 min-w-[3rem] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
           flex flex-col
           max-h-[calc(100vh-64px)] overflow-y-auto   /* <-- ensure collapsed rail never overflows the viewport */
         "
@@ -62,7 +62,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
   return (
     <div
       className="
-        w-80 shrink-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
+        w-72 shrink-0 min-w-[16rem] max-w-[18rem] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
         flex flex-col
         max-h-[calc(100vh-64px)] overflow-y-auto   /* <-- the whole panel fits under the sticky header and scrolls internally */
       "
