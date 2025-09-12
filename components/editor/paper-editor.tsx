@@ -192,21 +192,36 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
       </header>
 
       {/* Main area: stack on small screens, row on lg+ */}
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden flex-col lg:flex-row">
+      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
         {/* Sidebar - Outline */}
-        <div className="w-full lg:w-80 shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
+        <div className="hidden lg:block w-80 shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto min-w-[18rem] max-w-[20rem]">
           <OutlinePanel activeSection={activeSection} onSectionChange={setActiveSection} />
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col">
           <Tabs
             value={activeTab}
             onValueChange={(v) => setActiveTab(v as any)}
-            className="flex-1 min-h-0 flex flex-col"
+            className="flex-1 flex flex-col h-full"
           >
-            <div className="border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6">
-              <TabsList className="grid w-full max-w-md grid-cols-3">
+            {/* Mobile Outline Panel */}
+            <div className="lg:hidden border-b border-slate-200 dark:border-slate-700 p-4">
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer">
+                  <span className="font-medium text-slate-900 dark:text-white">Paper Outline</span>
+                  <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <div className="mt-4 max-h-60 overflow-y-auto">
+                  <OutlinePanel activeSection={activeSection} onSectionChange={setActiveSection} />
+                </div>
+              </details>
+            </div>
+
+            <div className="border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 py-2">
+              <TabsList className="grid w-full max-w-sm grid-cols-3">
                 <TabsTrigger value="write">Write</TabsTrigger>
                 <TabsTrigger value="sources">Sources</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -214,30 +229,25 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
             </div>
 
             <TabsContent value="write" className="flex-1 min-h-0 overflow-y-auto mt-0">
-              {/* Constrain editor width for readability */}
-              <div className="max-w-4xl w-full mx-auto px-4 sm:px-6">
-                <ContentEditor
-                  activeSection={activeSection}
-                  paper={paper}
-                  onUpdate={() => {}}
-                  onAiResult={handleAiResult}
-                  onSaveStatusChange={handleSaveStatusChange}
-                  onAddCitation={() => {
-                    setActiveTab('sources');
-                    window.dispatchEvent(new CustomEvent('open-add-source'));
-                  }}
-                />
-              </div>
+              <ContentEditor
+                activeSection={activeSection}
+                paper={paper}
+                onUpdate={() => {}}
+                onAiResult={handleAiResult}
+                onSaveStatusChange={handleSaveStatusChange}
+                onAddCitation={() => {
+                  setActiveTab('sources');
+                  window.dispatchEvent(new CustomEvent('open-add-source'));
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="sources" className="flex-1 min-h-0 overflow-y-auto mt-0">
-              <div className="max-w-4xl w-full mx-auto px-4 sm:px-6">
-                <CitationManager paperId={paperId} />
-              </div>
+              <CitationManager paperId={paperId} />
             </TabsContent>
 
             <TabsContent value="settings" className="flex-1 min-h-0 overflow-y-auto mt-0">
-              <div className="max-w-2xl w-full mx-auto px-4 sm:px-6 py-6">
+              <div className="max-w-2xl w-full mx-auto p-6">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Paper Settings</h3>
                 <div className="space-y-6">
                   <div>
@@ -271,8 +281,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
           </Tabs>
         </div>
 
-        {/* AI Panel (hidden on small; visible on lg+) */}
-        <div className="hidden lg:flex">
+        {/* AI Panel - Hidden on mobile, visible on desktop */}
+        <div className="hidden xl:flex">
           <AiPanel
             isCollapsed={aiPanelCollapsed}
             onToggle={() => setAiPanelCollapsed(!aiPanelCollapsed)}
@@ -282,6 +292,31 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
             currentTask={currentAiTask}
           />
         </div>
+      </div>
+
+      {/* Mobile AI Panel - Bottom Sheet */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-50">
+        <details className="group bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg">
+          <summary className="flex items-center justify-between p-4 cursor-pointer">
+            <div className="flex items-center">
+              <Brain className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
+              <span className="font-medium text-slate-900 dark:text-white">AI Assistant</span>
+            </div>
+            <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div className="max-h-80 overflow-y-auto border-t border-slate-200 dark:border-slate-700">
+            <AiPanel
+              isCollapsed={false}
+              onToggle={() => {}}
+              aiResults={aiResults}
+              onAiAction={handleAiAction}
+              isLoading={isAiLoading}
+              currentTask={currentAiTask}
+            />
+          </div>
+        </details>
       </div>
     </div>
   );
