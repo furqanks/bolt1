@@ -420,145 +420,148 @@ export function ContentEditor({
     <div className="h-full min-h-0 flex flex-col">
       {/* Section Header */}
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-16 z-30">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
+        <div className="flex flex-col space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
 
-              {/* Word Count */}
-              <div className="text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-medium">{wordCount}</span>
-                {(section.wordTarget ?? 0) > 0 && (
-                  <span className="text-slate-400 dark:text-slate-500">/{section.wordTarget}</span>
-                )}
-                <span className="ml-1 text-slate-400 dark:text-slate-500">words</span>
+                {/* Word Count */}
+                <div className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                  <span className="font-medium">{wordCount}</span>
+                  {(section.wordTarget ?? 0) > 0 && (
+                    <span className="text-slate-400 dark:text-slate-500">/{section.wordTarget}</span>
+                  )}
+                  <span className="ml-1 text-slate-400 dark:text-slate-500">words</span>
+                  
+                  {/* Versions Dropdown */}
+                  <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={versions.length === 0} className="text-xs">
+                        <History className="w-3 h-3 mr-1" />
+                        {versions.length}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-80">
+                      {versions.length === 0 ? (
+                        <div className="p-3 text-sm text-slate-500 dark:text-slate-400">No versions saved yet</div>
+                      ) : (
+                        versions.map((v) => (
+                          <div key={v.id} className="p-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{formatTimestamp(v.timestamp)}</div>
+                                <div className="text-sm text-slate-700 dark:text-slate-300 truncate">{v.preview}</div>
+                              </div>
+                              <div className="flex items-center gap-1 ml-2">
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPreviewVersion(v)}>
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRestoreVersion(v)}>
+                                  <RotateCcw className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Help Icon */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => setShowRubric(true)}
+                        >
+                          <HelpCircle className="w-3 h-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Writing guidelines for {section.title}</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{section.guidance}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              {/* Save Status */}
+              <div className="text-sm text-slate-600 dark:text-slate-300 order-last sm:order-first">
+                {saveStatus === 'saving' && <span className="text-blue-600 dark:text-blue-400">Saving...</span>}
+                {saveStatus === 'saved' && <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>}
               </div>
 
-              {/* Versions Dropdown */}
-              <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={versions.length === 0}>
-                    <History className="w-4 h-4 mr-2" />
-                    Versions ({versions.length})
-                    <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-80">
-                  {versions.length === 0 ? (
-                    <div className="p-3 text-sm text-slate-500 dark:text-slate-400">No versions saved yet</div>
-                  ) : (
-                    versions.map((v) => (
-                      <div key={v.id} className="p-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{formatTimestamp(v.timestamp)}</div>
-                            <div className="text-sm text-slate-700 dark:text-slate-300 truncate">{v.preview}</div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPreviewVersion(v)}>
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRestoreVersion(v)}>
-                              <RotateCcw className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Help Icon */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setShowRubric(true)}
-                    >
-                      <HelpCircle className="w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Ideate */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isAiLoading}>
+                      <Lightbulb className="w-4 h-4 mr-2" />
+                      Ideate
+                      <ChevronDown className="w-3 h-3 ml-1" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Writing guidelines for {section.title}</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleAiAction('rqs')}>Generate Research Questions</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('hypotheses')}>Refine Hypotheses</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('contributions')}>Outline Contributions</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Evidence */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isAiLoading}>
+                      <Search className="w-4 h-4 mr-2" />
+                      Evidence
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>Suggest Citations</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>Synthesize 3–5 Sources</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>Spot Gaps/Contradictions</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Write/Polish */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isAiLoading}>
+                      <PenTool className="w-4 h-4 mr-2" />
+                      Write/Polish
+                      <ChevronDown className="w-3 h-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleAiAction('critique')}>AI Feedback</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>Rewrite</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('proofread')}>Proofread</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>Shorten to 150 words</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>Expand to 300 words</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>Convert Bullets → Paragraph</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>Convert Paragraph → Bullets</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleManualSave} className="text-xs sm:text-sm">
+                  <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Save</span>
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={onAddCitation} className="text-xs sm:text-sm">
+                  <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Citation</span>
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{section.guidance}</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Save Status */}
-            <div className="text-sm text-slate-600 dark:text-slate-300 min-w-[120px]">
-              {saveStatus === 'saving' && <span className="text-blue-600 dark:text-blue-400">Saving...</span>}
-              {saveStatus === 'saved' && <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 border-r border-slate-200 dark:border-slate-700 pr-4">
-              {/* Ideate */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={isAiLoading}>
-                    <Lightbulb className="w-4 h-4 mr-2" />
-                    Ideate
-                    <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleAiAction('rqs')}>Generate Research Questions</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('hypotheses')}>Refine Hypotheses</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('contributions')}>Outline Contributions</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Evidence */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={isAiLoading}>
-                    <Search className="w-4 h-4 mr-2" />
-                    Evidence
-                    <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>Suggest Citations</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>Synthesize 3–5 Sources</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>Spot Gaps/Contradictions</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Write/Polish */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={isAiLoading}>
-                    <PenTool className="w-4 h-4 mr-2" />
-                    Write/Polish
-                    <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleAiAction('critique')}>AI Feedback</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>Rewrite</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('proofread')}>Proofread</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>Shorten to 150 words</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>Expand to 300 words</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>Convert Bullets → Paragraph</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>Convert Paragraph → Bullets</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <Button variant="outline" size="sm" onClick={handleManualSave}>
-              <Save className="w-4 h-4 mr-2" />
-              Save
-            </Button>
-
-            <Button variant="outline" size="sm" onClick={onAddCitation}>
-              <BookOpen className="w-4 h-4 mr-2" />
-              Add Citation
-            </Button>
           </div>
         </div>
 
@@ -573,57 +576,57 @@ export function ContentEditor({
       </div>
 
       {/* Toolbar */}
-      <div className="px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-32 z-20">
-        <div className="flex flex-wrap items-center gap-2 w-full overflow-x-auto">
+      <div className="px-4 sm:px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2 w-full">
           <Button variant="ghost" size="sm" onClick={() => formatText('bold')}>
-            <Bold className="w-4 h-4" />
+            <Bold className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('italic')}>
-            <Italic className="w-4 h-4" />
+            <Italic className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('underline')}>
-            <Underline className="w-4 h-4" />
+            <Underline className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-4 sm:h-6" />
 
           <Button variant="ghost" size="sm" onClick={() => formatText('justifyLeft')}>
-            <AlignLeft className="w-4 h-4" />
+            <AlignLeft className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('justifyCenter')}>
-            <AlignCenter className="w-4 h-4" />
+            <AlignCenter className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('justifyRight')}>
-            <AlignRight className="w-4 h-4" />
+            <AlignRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-4 sm:h-6" />
 
           <Button variant="ghost" size="sm" onClick={() => formatText('insertUnorderedList')}>
-            <List className="w-4 h-4" />
+            <List className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('insertOrderedList')}>
-            <ListOrdered className="w-4 h-4" />
+            <ListOrdered className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => formatText('formatBlock', 'blockquote')}>
-            <Quote className="w-4 h-4" />
+            <Quote className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-4 sm:h-6" />
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => formatText('createLink', prompt('Enter URL:') || '')}
           >
-            <Link className="w-4 h-4" />
+            <Link className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
 
       {/* Editor */}
-      <div className="flex-1 min-h-0 p-6 overflow-y-auto">
-        <div className="max-w-3xl mx-auto w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-4xl mx-auto w-full p-4 sm:p-6">
           {wordCount === 0 && (
             <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <div className="flex items-start gap-3">
@@ -643,16 +646,16 @@ export function ContentEditor({
           <div
             ref={editorRef}
             contentEditable
-            className="min-h-[500px] p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 leading-[1.75]"
+            className="min-h-[400px] sm:min-h-[500px] p-4 sm:p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 leading-[1.75] text-sm sm:text-base"
             onInput={handleContentChange}
             onMouseUp={handleTextSelection}
             onKeyUp={handleTextSelection}
-            style={{ fontSize: '16px', lineHeight: '1.75', color: 'inherit' }}
+            style={{ lineHeight: '1.75', color: 'inherit' }}
             data-placeholder={section.placeholder}
           />
 
           {/* Tips */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="flex items-center mb-2">
                 <Target className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />

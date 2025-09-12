@@ -35,7 +35,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
   if (isCollapsed) {
     return (
-      <div className="w-12 shrink-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-64px)] overflow-y-auto">
+      <div className="w-12 shrink-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-64px)] overflow-y-auto min-w-[3rem]">
         <Button
           variant="ghost"
           size="sm"
@@ -56,7 +56,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
   return (
     <div
       className="
-        w-64 sm:w-72 max-w-xs shrink-0
+        w-72 shrink-0 min-w-[16rem] max-w-[18rem]
         bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
         flex flex-col
         max-h-[calc(100vh-64px)] overflow-y-auto
@@ -72,29 +72,29 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 m-4 mb-0">
+        <TabsList className="grid w-full grid-cols-3 m-2 sm:m-4 mb-0 text-xs sm:text-sm">
           <TabsTrigger value="actions">Actions</TabsTrigger>
           <TabsTrigger value="suggestions">Results</TabsTrigger>
           <TabsTrigger value="references">References</TabsTrigger>
         </TabsList>
 
         {/* Actions */}
-        <TabsContent value="actions" className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto">
+        <TabsContent value="actions" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center">
+              <CardTitle className="text-xs sm:text-sm flex items-center">
                 <Lightbulb className="w-4 h-4 mr-2 text-yellow-600 dark:text-yellow-400" />
                 Ideate
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('rqs')} disabled={isLoading}>
+            <CardContent className="space-y-1 sm:space-y-2">
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('rqs')} disabled={isLoading}>
                 Generate Research Questions
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('hypotheses')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('hypotheses')} disabled={isLoading}>
                 Refine Hypotheses
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('contributions')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('contributions')} disabled={isLoading}>
                 Outline Contributions
               </Button>
             </CardContent>
@@ -102,19 +102,19 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center">
+              <CardTitle className="text-xs sm:text-sm flex items-center">
                 <Search className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
                 Evidence
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
+            <CardContent className="space-y-1 sm:space-y-2">
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
                 Suggest Citations
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('synthesize_sources')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('synthesize_sources')} disabled={isLoading}>
                 Synthesize 3–5 Sources
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('spot_gaps')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('spot_gaps')} disabled={isLoading}>
                 Spot Gaps/Contradictions
               </Button>
             </CardContent>
@@ -122,25 +122,25 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center">
+              <CardTitle className="text-xs sm:text-sm flex items-center">
                 <PenTool className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
                 Write/Polish
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('critique')} disabled={isLoading}>
+            <CardContent className="space-y-1 sm:space-y-2">
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('critique')} disabled={isLoading}>
                 AI Feedback
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('rewrite')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('rewrite')} disabled={isLoading}>
                 Rewrite
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => onAiAction('proofread')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('proofread')} disabled={isLoading}>
                 Proofread
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between" disabled={isLoading}>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs sm:text-sm" disabled={isLoading}>
                     Length Adjustments
                     <ChevronDown className="w-3 h-3" />
                   </Button>
@@ -155,7 +155,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between" disabled={isLoading}>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-xs sm:text-sm" disabled={isLoading}>
                     Format Conversion
                     <ChevronDown className="w-3 h-3" />
                   </Button>
@@ -169,8 +169,8 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           </Card>
 
           {isLoading && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center text-sm text-blue-700 dark:text-blue-300">
+            <div className="p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center text-xs sm:text-sm text-blue-700 dark:text-blue-300">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
                 Processing {currentTask}...
               </div>
@@ -179,7 +179,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
         </TabsContent>
 
         {/* Results */}
-        <TabsContent value="suggestions" className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto">
+        <TabsContent value="suggestions" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
           {Object.keys(aiResults).length === 0 ? (
             <div className="text-center py-8">
               <Target className="w-8 h-8 text-slate-400 mx-auto mb-3" />
@@ -189,12 +189,12 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
             Object.entries(aiResults).map(([task, data]) => (
               <Card key={task}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm capitalize flex items-center justify-between">
+                  <CardTitle className="text-xs sm:text-sm capitalize flex items-center justify-between">
                     {task.replace(/_/g, ' ')}
                     <Badge variant="secondary" className="text-xs">{new Date().toLocaleTimeString()}</Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm">
+                <CardContent className="text-xs sm:text-sm">
                   {task === 'critique' && data.feedback && (
                     <div className="space-y-3">
                       <div>
@@ -250,14 +250,14 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
         </TabsContent>
 
         {/* References */}
-        <TabsContent value="references" className="flex-1 min-h-0 p-4 space-y-4 mt-4 overflow-y-auto">
+        <TabsContent value="references" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
           {aiResults.suggest_citations?.citations ? (
             <div className="space-y-3">
               {aiResults.suggest_citations.citations.map((citation: any, i: number) => (
                 <Card key={i}>
-                  <CardContent className="p-4">
+                  <CardContent className="p-2 sm:p-4">
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-slate-900 dark:text-white">{citation.title}</h4>
+                      <h4 className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white">{citation.title}</h4>
                       <p className="text-xs text-slate-600 dark:text-slate-300">{citation.authors.join(', ')} ({citation.year})</p>
                       {citation.journal && <p className="text-xs text-slate-500 dark:text-slate-400 italic">{citation.journal}</p>}
                       {citation.relevance && (
@@ -286,7 +286,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           ) : (
             <div className="text-center py-8">
               <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">Suggested citations will appear here</p>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Suggested citations will appear here</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
                 Get Citation Suggestions
               </Button>
