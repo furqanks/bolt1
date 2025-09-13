@@ -56,10 +56,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
   return (
     <div
       className="
-        w-72 shrink-0 min-w-[16rem] max-w-[18rem]
-        bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700
-        flex flex-col
-        max-h-[calc(100vh-64px)] overflow-y-auto
+        w-[300px] xl:w-80 max-h-[calc(100vh-64px)] overflow-y-auto bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col
       "
     >
       {/* Header */}
@@ -88,13 +85,13 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('rqs')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('rqs')} disabled={isLoading}>
                 Generate Research Questions
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('hypotheses')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('hypotheses')} disabled={isLoading}>
                 Refine Hypotheses
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('contributions')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('contributions')} disabled={isLoading}>
                 Outline Contributions
               </Button>
             </CardContent>
@@ -108,13 +105,13 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
                 Suggest Citations
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('synthesize_sources')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('synthesize_sources')} disabled={isLoading}>
                 Synthesize 3–5 Sources
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('spot_gaps')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('spot_gaps')} disabled={isLoading}>
                 Spot Gaps/Contradictions
               </Button>
             </CardContent>
@@ -128,19 +125,19 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('critique')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('critique')} disabled={isLoading}>
                 AI Feedback
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('rewrite')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('rewrite')} disabled={isLoading}>
                 Rewrite
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-xs sm:text-sm" onClick={() => onAiAction('proofread')} disabled={isLoading}>
+              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('proofread')} disabled={isLoading}>
                 Proofread
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between text-xs sm:text-sm" disabled={isLoading}>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-left text-xs md:text-sm leading-snug whitespace-normal break-words" disabled={isLoading}>
                     Length Adjustments
                     <ChevronDown className="w-3 h-3" />
                   </Button>
@@ -155,7 +152,7 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between text-xs sm:text-sm" disabled={isLoading}>
+                  <Button variant="outline" size="sm" className="w-full justify-between text-left text-xs md:text-sm leading-snug whitespace-normal break-words" disabled={isLoading}>
                     Format Conversion
                     <ChevronDown className="w-3 h-3" />
                   </Button>

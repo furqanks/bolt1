@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   ArrowLeft,
   Save,
@@ -15,6 +16,8 @@ import {
   Settings,
   FileText,
   Brain,
+  ListTree,
+  Sparkles,
 } from 'lucide-react';
 import { OutlinePanel } from './outline-panel';
 import { ContentEditor } from './content-editor';
@@ -50,6 +53,8 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const [currentAiTask, setCurrentAiTask] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'write' | 'sources' | 'settings'>('write');
+  const [openOutline, setOpenOutline] = useState(false);
+  const [openAI, setOpenAI] = useState(false);
 
   // Add reference entries to References section (localStorage demo)
   useEffect(() => {
@@ -191,44 +196,90 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
         </div>
       </header>
 
-      {/* Main area: stack on small screens, row on lg+ */}
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
-        {/* Sidebar - Outline */}
-        <div className="hidden lg:block w-80 shrink-0 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto min-w-[18rem] max-w-[20rem]">
-          <OutlinePanel activeSection={activeSection} onSectionChange={setActiveSection} />
+      {/* MOBILE ACTION BAR (visible < md) */}
+      <div className="md:hidden sticky top-16 z-40 bg-white/70 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200 dark:border-slate-700">
+        <div className="px-3 py-2 flex gap-2">
+          {/* Outline Drawer */}
+          <Sheet open={openOutline} onOpenChange={setOpenOutline}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <ListTree className="w-4 h-4 mr-2" />
+                Outline
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[90vw] max-w-sm">
+              <SheetHeader className="p-4">
+                <SheetTitle>Paper Outline</SheetTitle>
+              </SheetHeader>
+              <div className="h-[calc(100vh-5rem)] overflow-y-auto">
+                <OutlinePanel
+                  activeSection={activeSection}
+                  onSectionChange={(s) => { setActiveSection(s); setOpenOutline(false); }}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* AI Drawer */}
+          <Sheet open={openAI} onOpenChange={setOpenAI}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <Sparkles className="w-4 h-4 mr-2" />
+                AI Assistant
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="p-0 w-[90vw] max-w-sm">
+              <SheetHeader className="p-4">
+                <SheetTitle>AI Assistant</SheetTitle>
+              </SheetHeader>
+              <div className="h-[calc(100vh-5rem)] overflow-y-auto">
+                <AiPanel
+                  isCollapsed={false}
+                  onToggle={() => {}}
+                  aiResults={aiResults}
+                  onAiAction={handleAiAction}
+                  isLoading={isAiLoading}
+                  currentTask={currentAiTask}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
+      </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as any)}
-            className="flex-1 flex flex-col h-full"
-          >
-            {/* Mobile Outline Panel */}
-            <div className="lg:hidden border-b border-slate-200 dark:border-slate-700 p-4">
-              <details className="group">
-                <summary className="flex items-center justify-between cursor-pointer">
-                  <span className="font-medium text-slate-900 dark:text-white">Paper Outline</span>
-                  <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </summary>
-                <div className="mt-4 max-h-60 overflow-y-auto">
-                  <OutlinePanel activeSection={activeSection} onSectionChange={setActiveSection} />
-                </div>
-              </details>
-            </div>
+      {/* DESKTOP/TABLET GRID */}
+      <div
+        className="
+          h-[calc(100vh-64px)]
+          grid
+          grid-cols-1
+          md:grid-cols-[300px_minmax(0,1fr)]
+          lg:grid-cols-[300px_minmax(0,1fr)_320px]
+          overflow-hidden
+        "
+      >
+        {/* LEFT Outline (hidden on mobile) */}
+        <aside className="hidden md:block overflow-y-auto max-h-[calc(100vh-64px)] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+          <div className="w-[300px]">
+            <OutlinePanel
+              activeSection={activeSection}
+              onSectionChange={setActiveSection}
+            />
+          </div>
+        </aside>
 
-            <div className="border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 py-2">
-              <TabsList className="grid w-full max-w-sm grid-cols-3">
+        {/* MAIN */}
+        <main className="min-w-0 min-h-0 flex flex-col">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="min-h-0 flex-1 flex flex-col">
+            <div className="border-b border-slate-200 dark:border-slate-700 px-3 sm:px-6">
+              <TabsList className="w-full max-w-md grid grid-cols-3">
                 <TabsTrigger value="write">Write</TabsTrigger>
                 <TabsTrigger value="sources">Sources</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="write" className="flex-1 min-h-0 overflow-y-auto mt-0">
+            <TabsContent value="write" className="min-h-0 flex-1 mt-0">
               <ContentEditor
                 activeSection={activeSection}
                 paper={paper}
@@ -242,12 +293,12 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               />
             </TabsContent>
 
-            <TabsContent value="sources" className="flex-1 min-h-0 overflow-y-auto mt-0">
+            <TabsContent value="sources" className="min-h-0 flex-1 mt-0">
               <CitationManager paperId={paperId} />
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 min-h-0 overflow-y-auto mt-0">
-              <div className="max-w-2xl w-full mx-auto p-6">
+            <TabsContent value="settings" className="min-h-0 flex-1 mt-0 p-6">
+              <div className="max-w-2xl w-full mx-auto">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Paper Settings</h3>
                 <div className="space-y-6">
                   <div>
@@ -279,44 +330,21 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
               </div>
             </TabsContent>
           </Tabs>
-        </div>
+        </main>
 
-        {/* AI Panel - Hidden on mobile, visible on desktop */}
-        <div className="hidden xl:flex">
-          <AiPanel
-            isCollapsed={aiPanelCollapsed}
-            onToggle={() => setAiPanelCollapsed(!aiPanelCollapsed)}
-            aiResults={aiResults}
-            onAiAction={handleAiAction}
-            isLoading={isAiLoading}
-            currentTask={currentAiTask}
-          />
-        </div>
-      </div>
-
-      {/* Mobile AI Panel - Bottom Sheet */}
-      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-50">
-        <details className="group bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg">
-          <summary className="flex items-center justify-between p-4 cursor-pointer">
-            <div className="flex items-center">
-              <Brain className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" />
-              <span className="font-medium text-slate-900 dark:text-white">AI Assistant</span>
-            </div>
-            <svg className="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </summary>
-          <div className="max-h-80 overflow-y-auto border-t border-slate-200 dark:border-slate-700">
+        {/* RIGHT AI (hidden < lg) */}
+        <aside className="hidden lg:flex flex-col overflow-y-auto max-h-[calc(100vh-64px)] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+          <div className="w-[320px]">
             <AiPanel
-              isCollapsed={false}
-              onToggle={() => {}}
+              isCollapsed={aiPanelCollapsed}
+              onToggle={() => setAiPanelCollapsed(!aiPanelCollapsed)}
               aiResults={aiResults}
               onAiAction={handleAiAction}
               isLoading={isAiLoading}
               currentTask={currentAiTask}
             />
           </div>
-        </details>
+        </aside>
       </div>
     </div>
   );

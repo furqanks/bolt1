@@ -92,3 +92,6 @@ body {
   overflow-y: auto;   /* allow vertical scrolling */
   overflow-x: hidden; /* prevent horizontal scrollbars */
 }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

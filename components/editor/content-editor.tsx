@@ -415,58 +415,91 @@ export function ContentEditor({
     document.execCommand(command, false, value);
     editorRef.current?.focus();
   };
+                <div className="flex items-center gap-3">
+                  <div className="hidden md:flex items-center space-x-2 border-r border-slate-200 dark:border-slate-700 pr-4">
+                    {/* Ideate */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={isAiLoading}>
+                          <Lightbulb className="w-4 h-4 mr-2" />
+                          Ideate
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAiAction('rqs')}>Generate Research Questions</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('hypotheses')}>Refine Hypotheses</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('contributions')}>Outline Contributions</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
-  return (
-    <div className="h-full min-h-0 flex flex-col">
-      {/* Section Header */}
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-16 z-30">
-        <div className="flex flex-col space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{section.title}</h2>
+                    {/* Evidence */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={isAiLoading}>
+                          <Search className="w-4 h-4 mr-2" />
+                          Evidence
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>Suggest Citations</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>Synthesize 3–5 Sources</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>Spot Gaps/Contradictions</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Word Count */}
-                <div className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                  <span className="font-medium">{wordCount}</span>
-                  {(section.wordTarget ?? 0) > 0 && (
-                    <span className="text-slate-400 dark:text-slate-500">/{section.wordTarget}</span>
-                  )}
-                  <span className="ml-1 text-slate-400 dark:text-slate-500">words</span>
-                  
-                  {/* Versions Dropdown */}
-                  <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" disabled={versions.length === 0} className="text-xs">
-                        <History className="w-3 h-3 mr-1" />
-                        {versions.length}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-80">
-                      {versions.length === 0 ? (
-                        <div className="p-3 text-sm text-slate-500 dark:text-slate-400">No versions saved yet</div>
-                      ) : (
-                        versions.map((v) => (
-                          <div key={v.id} className="p-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{formatTimestamp(v.timestamp)}</div>
-                                <div className="text-sm text-slate-700 dark:text-slate-300 truncate">{v.preview}</div>
-                              </div>
-                              <div className="flex items-center gap-1 ml-2">
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setPreviewVersion(v)}>
-                                  <Eye className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRestoreVersion(v)}>
-                                  <RotateCcw className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    {/* Write/Polish */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={isAiLoading}>
+                          <PenTool className="w-4 h-4 mr-2" />
+                          Write/Polish
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleAiAction('critique')}>AI Feedback</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>Rewrite</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('proofread')}>Proofread</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>Shorten to 150 words</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>Expand to 300 words</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>Convert Bullets → Paragraph</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>Convert Paragraph → Bullets</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="md:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={isAiLoading}>
+                          AI Actions
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-60">
+                        <div className="px-2 py-1 text-xs uppercase text-slate-400">Ideate</div>
+                        <DropdownMenuItem onClick={() => handleAiAction('rqs')}>Generate Research Questions</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('hypotheses')}>Refine Hypotheses</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('contributions')}>Outline Contributions</DropdownMenuItem>
+
+                        <div className="px-2 py-1 text-xs uppercase text-slate-400">Evidence</div>
+                        <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>Suggest Citations</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>Synthesize 3–5 Sources</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>Spot Gaps/Contradictions</DropdownMenuItem>
+
+                        <div className="px-2 py-1 text-xs uppercase text-slate-400">Write/Polish</div>
+                        <DropdownMenuItem onClick={() => handleAiAction('critique')}>AI Feedback</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>Rewrite</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('proofread')}>Proofread</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>Shorten to 150 words</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>Expand to 300 words</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>Bullets → Paragraph</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>Paragraph → Bullets</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
 
                   {/* Help Icon */}
                   <TooltipProvider>
@@ -576,8 +609,8 @@ export function ContentEditor({
       </div>
 
       {/* Toolbar */}
-      <div className="px-4 sm:px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2 w-full">
+      <div className="px-3 sm:px-6 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 sticky top-32 z-20">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           <Button variant="ghost" size="sm" onClick={() => formatText('bold')}>
             <Bold className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
@@ -625,10 +658,10 @@ export function ContentEditor({
       </div>
 
       {/* Editor */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-4xl mx-auto w-full p-4 sm:p-6">
+      <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto">
+        <div className="max-w-3xl mx-auto w-full">
           {wordCount === 0 && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
               <div className="flex items-start gap-3">
                 <Target className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div>
