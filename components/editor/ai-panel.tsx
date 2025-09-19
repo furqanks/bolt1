@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,11 +17,11 @@ import {
   CheckCircle,
   AlertTriangle,
   Target,
-  BookOpen
+  BookOpen,
 } from 'lucide-react';
 
 interface AiPanelProps {
-  isCollapsed: boolean;
+  isCollapsed: boolean;            // still accepted for compatibility
   onToggle: () => void;
   aiResults: { [key: string]: any };
   onAiAction: (task: string, wordTarget?: number) => void;
@@ -30,23 +29,33 @@ interface AiPanelProps {
   currentTask: string | null;
 }
 
-export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoading, currentTask }: AiPanelProps) {
-  const [activeTab, setActiveTab] = useState('actions');
+export function AiPanel({
+  isCollapsed,
+  onToggle,
+  aiResults,
+  onAiAction,
+  isLoading,
+  currentTask,
+}: AiPanelProps) {
+  const [activeTab, setActiveTab] = useState<'actions' | 'suggestions' | 'references'>('actions');
 
+  // If you still want the super-thin collapsed bar in some places:
   if (isCollapsed) {
     return (
-      <div className="w-12 shrink-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-64px)] overflow-y-auto min-w-[3rem]">
+      <div className="w-12 h-full bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col">
         <Button
           variant="ghost"
           size="sm"
           onClick={onToggle}
           className="h-12 w-12 p-0 border-b border-slate-200 dark:border-slate-700"
+          aria-label="Expand AI Assistant"
+          title="Expand AI Assistant"
         >
           <ChevronLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1 flex items-center justify-center">
-          <div className="writing-mode-vertical text-sm text-slate-500 dark:text-slate-400 font-medium">
-            AI Assistant
+          <div className="writing-mode-vertical text-xs text-slate-500 dark:text-slate-400 font-medium">
+            AI
           </div>
         </div>
       </div>
@@ -54,120 +63,189 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
   }
 
   return (
-    <div
-      className="
-        w-[300px] xl:w-80 max-h-[calc(100vh-64px)] overflow-y-auto bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col
-      "
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+    <div className="h-full min-w-0 flex flex-col overflow-hidden bg-white dark:bg-slate-800">
+      {/* Fixed header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
         <h3 className="font-semibold text-slate-900 dark:text-white">AI Assistant</h3>
-        <Button variant="ghost" size="sm" onClick={onToggle}>
+        <Button variant="ghost" size="sm" onClick={onToggle} aria-label="Collapse AI Assistant">
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 m-2 sm:m-4 mb-0 text-xs sm:text-sm">
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-          <TabsTrigger value="suggestions">Results</TabsTrigger>
-          <TabsTrigger value="references">References</TabsTrigger>
-        </TabsList>
+      {/* Tabs container must be min-h-0 + flex-1 so children can scroll */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as any)}
+        className="flex-1 min-h-0 flex flex-col"
+      >
+        <div className="px-4 pt-3 pb-1 shrink-0">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="suggestions">Results</TabsTrigger>
+            <TabsTrigger value="references">References</TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Actions */}
-        <TabsContent value="actions" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
+        {/* Each tab body becomes the scroll area */}
+        <TabsContent
+          value="actions"
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 mt-0"
+        >
+          {/* IDEATE */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm flex items-center">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
                 <Lightbulb className="w-4 h-4 mr-2 text-yellow-600 dark:text-yellow-400" />
                 Ideate
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('rqs')} disabled={isLoading}>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('rqs')}
+                disabled={isLoading}
+              >
                 Generate Research Questions
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('hypotheses')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('hypotheses')}
+                disabled={isLoading}
+              >
                 Refine Hypotheses
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('contributions')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('contributions')}
+                disabled={isLoading}
+              >
                 Outline Contributions
               </Button>
             </CardContent>
           </Card>
 
+          {/* EVIDENCE */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm flex items-center">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
                 <Search className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
                 Evidence
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('suggest_citations')}
+                disabled={isLoading}
+              >
                 Suggest Citations
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('synthesize_sources')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('synthesize_sources')}
+                disabled={isLoading}
+              >
                 Synthesize 3–5 Sources
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('spot_gaps')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('spot_gaps')}
+                disabled={isLoading}
+              >
                 Spot Gaps/Contradictions
               </Button>
             </CardContent>
           </Card>
 
+          {/* WRITE / POLISH */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm flex items-center">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center">
                 <PenTool className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
                 Write/Polish
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1 sm:space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('critique')} disabled={isLoading}>
+            <CardContent className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('critique')}
+                disabled={isLoading}
+              >
                 AI Feedback
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('rewrite')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('rewrite')}
+                disabled={isLoading}
+              >
                 Rewrite
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start text-left text-xs md:text-sm leading-snug whitespace-normal break-words" onClick={() => onAiAction('proofread')} disabled={isLoading}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => onAiAction('proofread')}
+                disabled={isLoading}
+              >
                 Proofread
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between text-left text-xs md:text-sm leading-snug whitespace-normal break-words" disabled={isLoading}>
-                    Length Adjustments
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => onAiAction('shorten', 100)}>Shorten to 100 words</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAiAction('shorten', 150)}>Shorten to 150 words</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAiAction('expand', 250)}>Expand to 250 words</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAiAction('expand', 400)}>Expand to 400 words</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full justify-between text-left text-xs md:text-sm leading-snug whitespace-normal break-words" disabled={isLoading}>
-                    Format Conversion
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => onAiAction('bullets_to_paragraph')}>Bullets → Paragraph</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onAiAction('paragraph_to_bullets')}>Paragraph → Bullets</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAiAction('shorten', 150)}
+                  disabled={isLoading}
+                >
+                  Shorten → 150
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAiAction('expand', 300)}
+                  disabled={isLoading}
+                >
+                  Expand → 300
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAiAction('bullets_to_paragraph')}
+                  disabled={isLoading}
+                >
+                  Bullets → Paragraph
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAiAction('paragraph_to_bullets')}
+                  disabled={isLoading}
+                >
+                  Paragraph → Bullets
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
           {isLoading && (
-            <div className="p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center text-sm text-blue-700 dark:text-blue-300">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
                 Processing {currentTask}...
               </div>
@@ -175,60 +253,82 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           )}
         </TabsContent>
 
-        {/* Results */}
-        <TabsContent value="suggestions" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
+        <TabsContent
+          value="suggestions"
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 mt-0"
+        >
           {Object.keys(aiResults).length === 0 ? (
             <div className="text-center py-8">
               <Target className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">AI results will appear here after running actions</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                AI results will appear here after running actions
+              </p>
             </div>
           ) : (
             Object.entries(aiResults).map(([task, data]) => (
               <Card key={task}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-xs sm:text-sm capitalize flex items-center justify-between">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm capitalize flex items-center justify-between">
                     {task.replace(/_/g, ' ')}
-                    <Badge variant="secondary" className="text-xs">{new Date().toLocaleTimeString()}</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {new Date().toLocaleTimeString()}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs sm:text-sm">
+                <CardContent className="text-sm">
                   {task === 'critique' && data.feedback && (
                     <div className="space-y-3">
                       <div>
-                        <div className="flex items-center mb-2">
+                        <div className="flex items-center mb-1">
                           <CheckCircle className="w-4 h-4 text-emerald-600 mr-2" />
-                          <span className="font-medium text-emerald-700 dark:text-emerald-300">Strengths</span>
+                          <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                            Strengths
+                          </span>
                         </div>
                         <ul className="space-y-1 text-slate-600 dark:text-slate-300">
-                          {data.feedback.strengths.map((item: string, i: number) => <li key={i} className="text-xs">• {item}</li>)}
+                          {data.feedback.strengths.map((item: string, i: number) => (
+                            <li key={i} className="text-xs">• {item}</li>
+                          ))}
                         </ul>
                       </div>
+
                       <div>
-                        <div className="flex items-center mb-2">
+                        <div className="flex items-center mb-1">
                           <AlertTriangle className="w-4 h-4 text-yellow-600 mr-2" />
-                          <span className="font-medium text-yellow-700 dark:text-yellow-300">Areas for Improvement</span>
+                          <span className="font-medium text-yellow-700 dark:text-yellow-300">
+                            Areas for Improvement
+                          </span>
                         </div>
                         <ul className="space-y-1 text-slate-600 dark:text-slate-300">
-                          {data.feedback.weaknesses.map((item: string, i: number) => <li key={i} className="text-xs">• {item}</li>)}
+                          {data.feedback.weaknesses.map((item: string, i: number) => (
+                            <li key={i} className="text-xs">• {item}</li>
+                          ))}
                         </ul>
                       </div>
                     </div>
                   )}
 
-                  {(task === 'rqs' || task === 'hypotheses' || task === 'contributions') && data.suggestions && (
-                    <ul className="space-y-2">
-                      {data.suggestions.map((item: string, i: number) => (
-                        <li key={i} className="text-xs text-slate-600 dark:text-slate-300 p-2 bg-slate-50 dark:bg-slate-700 rounded">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {(task === 'rqs' || task === 'hypotheses' || task === 'contributions') &&
+                    data.suggestions && (
+                      <ul className="space-y-2">
+                        {data.suggestions.map((item: string, i: number) => (
+                          <li
+                            key={i}
+                            className="text-xs text-slate-600 dark:text-slate-300 p-2 bg-slate-50 dark:bg-slate-700 rounded"
+                          >
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
 
                   {task === 'spot_gaps' && data.gaps && (
                     <ul className="space-y-2">
                       {data.gaps.map((item: string, i: number) => (
-                        <li key={i} className="text-xs text-slate-600 dark:text-slate-300 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                        <li
+                          key={i}
+                          className="text-xs text-slate-600 dark:text-slate-300 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800"
+                        >
                           {item}
                         </li>
                       ))}
@@ -246,30 +346,44 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           )}
         </TabsContent>
 
-        {/* References */}
-        <TabsContent value="references" className="flex-1 min-h-0 p-2 sm:p-4 space-y-3 sm:space-y-4 mt-2 sm:mt-4 overflow-y-auto">
+        <TabsContent
+          value="references"
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 mt-0"
+        >
           {aiResults.suggest_citations?.citations ? (
             <div className="space-y-3">
               {aiResults.suggest_citations.citations.map((citation: any, i: number) => (
                 <Card key={i}>
-                  <CardContent className="p-2 sm:p-4">
+                  <CardContent className="p-4">
                     <div className="space-y-2">
-                      <h4 className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white">{citation.title}</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-300">{citation.authors.join(', ')} ({citation.year})</p>
-                      {citation.journal && <p className="text-xs text-slate-500 dark:text-slate-400 italic">{citation.journal}</p>}
+                      <h4 className="text-sm font-medium text-slate-900 dark:text-white">
+                        {citation.title}
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        {citation.authors.join(', ')} ({citation.year})
+                      </p>
+                      {citation.journal && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                          {citation.journal}
+                        </p>
+                      )}
                       {citation.relevance && (
                         <p className="text-xs text-slate-600 dark:text-slate-300 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
                           {citation.relevance}
                         </p>
                       )}
-                      <div className="flex items-center space-x-2 pt-2">
+                      <div className="flex items-center gap-2 pt-2">
                         <Button size="sm" variant="outline" className="text-xs h-7">
                           <Plus className="w-3 h-3 mr-1" />
                           Add to Sources
                         </Button>
                         {(citation.url || citation.doi) && (
                           <Button size="sm" variant="ghost" className="text-xs h-7" asChild>
-                            <a href={citation.url || `https://doi.org/${citation.doi}`} target="_blank" rel="noopener noreferrer">
+                            <a
+                              href={citation.url || `https://doi.org/${citation.doi}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </Button>
@@ -283,8 +397,16 @@ export function AiPanel({ isCollapsed, onToggle, aiResults, onAiAction, isLoadin
           ) : (
             <div className="text-center py-8">
               <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Suggested citations will appear here</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={() => onAiAction('suggest_citations')} disabled={isLoading}>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Suggested citations will appear here
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => onAiAction('suggest_citations')}
+                disabled={isLoading}
+              >
                 Get Citation Suggestions
               </Button>
             </div>
