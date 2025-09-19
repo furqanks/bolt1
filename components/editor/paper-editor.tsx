@@ -3,22 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/providers';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+
 import {
   ArrowLeft,
   Save,
   Download,
   Share,
-  Settings,
+  Settings as SettingsIcon,
   FileText,
   Brain,
-  Menu,
 } from 'lucide-react';
-
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 import { OutlinePanel } from './outline-panel';
 import { ContentEditor } from './content-editor';
@@ -48,77 +47,74 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
 
   const [paper, setPaper] = useState<Paper | null>(null);
   const [activeSection, setActiveSection] = useState('abstract');
-  const [globalSaveStatus, setGlobalSaveStatus] =
-    useState<'idle' | 'saving' | 'saved'>('idle');
-  const [activeTab, setActiveTab] =
-    useState<'write' | 'sources' | 'settings'>('write');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // right panel (unchanged)
-  const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<'write' | 'sources' | 'settings'>('write');
+  const [globalSaveStatus, setGlobalSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // AI side-panel state
+  const [aiPanelCollapsedMobile, setAiPanelCollapsedMobile] = useState(false); // (kept for future mobile use)
   const [aiResults, setAiResults] = useState<{ [key: string]: any }>({});
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [currentAiTask, setCurrentAiTask] = useState<string | null>(null);
 
-  // NEW: outline drawer open state (mobile & tablet)
-  const [outlineOpen, setOutlineOpen] = useState(false);
+  // NEW: desktop collapsible sidebars
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
-  // listen for "add reference entry" (unchanged logic)
+  // --- wiring: add reference entry from sources tab into References section (localStorage)
   useEffect(() => {
     const handler = (e: any) => {
       const entry = e?.detail?.entry;
-      if (!entry) return;
+      if (!entry || !paper?.id) return;
 
-      if (paper?.id) {
-        const referencesKey = `paper_${paper.id}_section_references`;
-        const currentContent = localStorage.getItem(referencesKey) || '';
-        const separator = currentContent.trim() ? '\n\n' : '';
-        const updatedContent = currentContent + separator + entry;
-        localStorage.setItem(referencesKey, updatedContent);
-      }
+      const referencesKey = `paper_${paper.id}_section_references`;
+      const currentContent = localStorage.getItem(referencesKey) || '';
+      const separator = currentContent.trim() ? '\n\n' : '';
+      const updated = currentContent + separator + entry;
+      localStorage.setItem(referencesKey, updated);
 
       setActiveTab('write');
     };
     window.addEventListener('add-reference-entry', handler as any);
-    return () =>
-      window.removeEventListener('add-reference-entry', handler as any);
+    return () => window.removeEventListener('add-reference-entry', handler as any);
   }, [paper?.id]);
 
-  // needed for inline citation insertion (unchanged)
+  // --- wiring: inline citation insertion (switch to write, focus, insert)
   useEffect(() => {
     const handler = (e: any) => {
       const inline = e?.detail?.inline;
       if (!inline) return;
+
       setActiveTab('write');
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('editor-focus'));
-        window.dispatchEvent(
-          new CustomEvent('editor-insert-citation', { detail: { inline } }),
-        );
+        window.dispatchEvent(new CustomEvent('editor-insert-citation', { detail: { inline } }));
       }, 80);
     };
     window.addEventListener('request-insert-citation', handler as any);
-    return () =>
-      window.removeEventListener('request-insert-citation', handler as any);
+    return () => window.removeEventListener('request-insert-citation', handler as any);
   }, []);
 
-  // load paper (unchanged)
+  // --- load paper from localStorage
   useEffect(() => {
     if (!user) {
       router.push('/login');
       return;
     }
-    const savedPapers = localStorage.getItem('researchflow_papers');
-    if (savedPapers) {
-      const papers = JSON.parse(savedPapers);
-      const currentPaper = papers.find((p: Paper) => p.id === paperId);
-      if (currentPaper) {
-        setPaper(currentPaper);
+    const saved = localStorage.getItem('researchflow_papers');
+    if (saved) {
+      const papers: Paper[] = JSON.parse(saved);
+      const found = papers.find((p) => p.id === paperId);
+      if (found) {
+        setPaper(found);
       } else {
         router.push('/dashboard');
       }
     } else {
       router.push('/dashboard');
     }
+    setIsLoading(false);
   }, [user, paperId, router]);
 
   const handleAiResult = (task: string, data: any) => {
@@ -127,23 +123,31 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
   const handleAiAction = async (task: string, wordTarget?: number) => {
     setIsAiLoading(true);
     setCurrentAiTask(task);
-    // actual AI handling occurs inside ContentEditor via /api/ai
+    // The actual work happens inside ContentEditor via /api/ai calls.
   };
   const handleSaveStatusChange = (status: 'idle' | 'saving' | 'saved') => {
     setGlobalSaveStatus(status);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg animate-pulse mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-300">Loading your paper...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!paper) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-            Paper not found
-          </h2>
-          <Button onClick={() => router.push('/dashboard')}>
-            Return to Dashboard
-          </Button>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">Paper not found</h2>
+          <p className="text-slate-600 dark:text-slate-300 mb-4">The paper you're looking for doesn't exist.</p>
+          <Button onClick={() => router.push('/dashboard')}>Return to Dashboard</Button>
         </div>
       </div>
     );
@@ -153,205 +157,232 @@ export function PaperEditor({ paperId }: PaperEditorProps) {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40">
-        <div className="px-3 sm:px-4 lg:px-6">
+        <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2 sm:gap-4">
-              {/* back */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="hidden sm:inline-flex"
-              >
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
               </Button>
 
-              {/* NEW: open outline drawer on small screens */}
-              <Sheet open={outlineOpen} onOpenChange={setOutlineOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="lg:hidden"
-                    aria-label="Open outline"
-                  >
-                    <Menu className="w-4 h-4 mr-2" />
-                    Outline
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[85vw] sm:w-[420px]">
-                  <SheetHeader className="px-4 py-3 border-b">
-                    <SheetTitle>Paper Outline</SheetTitle>
-                  </SheetHeader>
-                  <div className="h-[calc(100vh-56px)] overflow-y-auto">
-                    <OutlinePanel
-                      activeSection={activeSection}
-                      onSectionChange={(s) => {
-                        setActiveSection(s);
-                        setOutlineOpen(false); // close after selecting
-                      }}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
 
-              {/* title + status */}
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <div>
-                  <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white truncate max-w-[50vw] sm:max-w-none">
+                  <h1 className="text-lg font-semibold text-slate-900 dark:text-white truncate max-w-xs">
                     {paper.title}
                   </h1>
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    <Badge variant="secondary" className="text-[10px] sm:text-xs">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <Badge variant="secondary" className="text-xs">
                       {paper.type}
                     </Badge>
                     {globalSaveStatus === 'saving' && (
-                      <span className="text-blue-600 dark:text-blue-400">
-                        Saving…
-                      </span>
+                      <span className="text-blue-600 dark:text-blue-400">Saving...</span>
                     )}
                     {globalSaveStatus === 'saved' && (
-                      <span className="text-emerald-600 dark:text-emerald-400">
-                        All changes saved
-                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400">All changes saved</span>
                     )}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm">
                 <Brain className="w-4 h-4 mr-2" />
                 AI Feedback
               </Button>
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Button variant="ghost" size="sm">
                 <Save className="w-4 h-4 mr-2" />
                 Save
               </Button>
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Button variant="ghost" size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex">
+              <Button variant="ghost" size="sm">
                 <Share className="w-4 h-4 mr-2" />
                 Share
               </Button>
-              <Button variant="ghost" size="sm" className="hidden md:inline-flex">
-                <Settings className="w-4 h-4" />
+              <Button variant="ghost" size="sm">
+                <SettingsIcon className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* MAIN GRID: desktop has 3 columns; mobile collapses to 1 + drawers */}
-      <div className="h-[calc(100vh-64px)] grid gap-x-3 sm:gap-x-4 lg:gap-x-6 px-2 sm:px-4 lg:px-6 lg:[grid-template-columns:280px_1fr_340px]">
-        {/* LEFT: outline (desktop only; mobile uses Sheet above) */}
-        <aside className="hidden lg:block min-w-0">
-          <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 rounded-md">
-            <OutlinePanel
-              activeSection={activeSection}
-              onSectionChange={setActiveSection}
-            />
-          </div>
-        </aside>
-
-        {/* CENTER: tabs + editor; proper scrolling setup */}
-        <main className="min-w-0 flex flex-col overflow-hidden">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as any)}
-            className="min-h-0 flex-1 flex flex-col"
+      {/* DESKTOP LAYOUT: collapsible left & right panels via CSS vars */}
+      <div
+        className="h-[calc(100vh-64px)] px-2 sm:px-4 lg:px-6"
+        style={
+          {
+            // @ts-ignore custom CSS vars
+            '--left': leftCollapsed ? '0px' : '280px',
+            '--right': rightCollapsed ? '0px' : '340px',
+          } as React.CSSProperties
+        }
+      >
+        <div className="h-full grid gap-x-3 lg:gap-x-4 lg:[grid-template-columns:var(--left)_1fr_var(--right)]">
+          {/* LEFT: Outline (desktop) */}
+          <aside
+            className={`
+              relative hidden lg:block min-w-0 transition-[width,opacity] duration-200
+              ${leftCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}
+            `}
           >
-            <div className="border-b border-slate-200 dark:border-slate-700 px-2 sm:px-4">
-              <TabsList className="w-full max-w-md grid grid-cols-3">
-                <TabsTrigger value="write">Write</TabsTrigger>
-                <TabsTrigger value="sources">Sources</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-              </TabsList>
+            <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 rounded-md">
+              <OutlinePanel activeSection={activeSection} onSectionChange={setActiveSection} />
             </div>
 
-            <TabsContent value="write" className="min-h-0 flex-1 mt-0 overflow-hidden">
-              <ContentEditor
-                activeSection={activeSection}
-                paper={paper}
-                onUpdate={() => {}}
-                onAiResult={handleAiResult}
-                onSaveStatusChange={handleSaveStatusChange}
-                onAddCitation={() => {
-                  setActiveTab('sources');
-                  window.dispatchEvent(new CustomEvent('open-add-source'));
-                }}
-              />
-            </TabsContent>
+            {/* Collapse handle on right edge */}
+            <button
+              type="button"
+              onClick={() => setLeftCollapsed(true)}
+              className={`
+                absolute -right-3 top-1/2 -translate-y-1/2 hidden lg:flex
+                h-8 w-6 items-center justify-center rounded-md
+                bg-white/90 dark:bg-slate-800/90 shadow border
+                border-slate-200 dark:border-slate-700
+                ${leftCollapsed ? 'pointer-events-none opacity-0' : ''}
+              `}
+              title="Collapse outline"
+              aria-label="Collapse outline"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4">
+                <path d="M12.5 5l-5 5 5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </aside>
 
-            <TabsContent value="sources" className="min-h-0 flex-1 mt-0 overflow-hidden">
-              <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-                <CitationManager paperId={paperId} />
+          {/* LEFT expand handle (when collapsed) */}
+          {leftCollapsed && (
+            <button
+              type="button"
+              onClick={() => setLeftCollapsed(false)}
+              className="hidden lg:flex items-center justify-center w-3 -ml-3 pr-1 hover:w-5 transition-all duration-150"
+              title="Expand outline"
+              aria-label="Expand outline"
+            >
+              <div className="h-12 w-2 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                <svg viewBox="0 0 20 20" className="h-3 w-3 text-slate-500">
+                  <path d="M7.5 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
-            </TabsContent>
+            </button>
+          )}
 
-            <TabsContent value="settings" className="min-h-0 flex-1 mt-0 overflow-hidden">
-              <div className="h-full overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
-                <div className="max-w-2xl">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">
-                    Paper Settings
-                  </h3>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Paper Title
-                      </label>
-                      <Input
-                        value={paper.title}
-                        onChange={(e) => setPaper({ ...paper, title: e.target.value })}
-                        className="max-w-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Research Topic
-                      </label>
-                      <Input
-                        value={paper.topic}
-                        onChange={(e) => setPaper({ ...paper, topic: e.target.value })}
-                        className="max-w-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        Due Date
-                      </label>
-                      <Input
-                        type="date"
-                        value={paper.dueDate || ''}
-                        onChange={(e) => setPaper({ ...paper, dueDate: e.target.value })}
-                        className="max-w-md"
-                      />
+          {/* CENTER: Editor + tabs */}
+          <main className="min-w-0 flex flex-col overflow-hidden">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="min-h-0 flex-1 flex flex-col">
+              <div className="border-b border-slate-200 dark:border-slate-700 px-2 sm:px-4">
+                <TabsList className="w-full max-w-md grid grid-cols-3">
+                  <TabsTrigger value="write">Write</TabsTrigger>
+                  <TabsTrigger value="sources">Sources</TabsTrigger>
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="write" className="min-h-0 flex-1 mt-0 overflow-hidden">
+                <ContentEditor
+                  activeSection={activeSection}
+                  paper={paper}
+                  onUpdate={() => {}}
+                  onAiResult={handleAiResult}
+                  onSaveStatusChange={handleSaveStatusChange}
+                  onAddCitation={() => {
+                    setActiveTab('sources');
+                    window.dispatchEvent(new CustomEvent('open-add-source'));
+                  }}
+                />
+              </TabsContent>
+
+              <TabsContent value="sources" className="min-h-0 flex-1 mt-0 overflow-hidden">
+                <div className="h-full overflow-y-auto bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
+                  <CitationManager paperId={paperId} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="settings" className="min-h-0 flex-1 mt-0 overflow-hidden">
+                <div className="h-full overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
+                  <div className="max-w-2xl">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Paper Settings</h3>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Paper Title</label>
+                        <Input value={paper.title} onChange={(e) => setPaper({ ...paper, title: e.target.value })} className="max-w-md" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Research Topic</label>
+                        <Input value={paper.topic} onChange={(e) => setPaper({ ...paper, topic: e.target.value })} className="max-w-md" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Due Date</label>
+                        <Input type="date" value={paper.dueDate || ''} onChange={(e) => setPaper({ ...paper, dueDate: e.target.value })} className="max-w-md" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </main>
+              </TabsContent>
+            </Tabs>
+          </main>
 
-        {/* RIGHT: AI panel (desktop only by default) */}
-        <aside className="hidden lg:block min-w-0">
-          <div className="h-full bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
-            <AiPanel
-              isCollapsed={aiPanelCollapsed}
-              onToggle={() => setAiPanelCollapsed(!aiPanelCollapsed)}
-              aiResults={aiResults}
-              onAiAction={handleAiAction}
-              isLoading={isAiLoading}
-              currentTask={currentAiTask}
-            />
-          </div>
-        </aside>
+          {/* RIGHT: AI Panel (desktop) */}
+          <aside
+            className={`
+              relative hidden lg:block min-w-0 transition-[width,opacity] duration-200
+              ${rightCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}
+            `}
+          >
+            <div className="h-full bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
+              <AiPanel
+                isCollapsed={false}
+                onToggle={() => {}}
+                aiResults={aiResults}
+                onAiAction={handleAiAction}
+                isLoading={isAiLoading}
+                currentTask={currentAiTask}
+              />
+            </div>
+
+            {/* Collapse handle on left edge */}
+            <button
+              type="button"
+              onClick={() => setRightCollapsed(true)}
+              className={`
+                absolute -left-3 top-1/2 -translate-y-1/2 hidden lg:flex
+                h-8 w-6 items-center justify-center rounded-md
+                bg-white/90 dark:bg-slate-800/90 shadow border
+                border-slate-200 dark:border-slate-700
+                ${rightCollapsed ? 'pointer-events-none opacity-0' : ''}
+              `}
+              title="Collapse AI panel"
+              aria-label="Collapse AI panel"
+            >
+              <svg viewBox="0 0 20 20" className="h-4 w-4">
+                <path d="M7.5 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </aside>
+
+          {/* RIGHT expand handle (when collapsed) */}
+          {rightCollapsed && (
+            <button
+              type="button"
+              onClick={() => setRightCollapsed(false)}
+              className="hidden lg:flex items-center justify-center w-3 -mr-3 pl-1 hover:w-5 transition-all duration-150"
+              title="Expand AI panel"
+              aria-label="Expand AI panel"
+            >
+              <div className="h-12 w-2 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                <svg viewBox="0 0 20 20" className="h-3 w-3 text-slate-500">
+                  <path d="M12.5 5l-5 5 5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
