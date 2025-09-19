@@ -13,7 +13,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered, Quote, Link,
   Menu, ChevronDown,
-  PanelsLeft, PanelsRight
+  PanelLeft, PanelRight
 } from 'lucide-react';
 
 /** Optional props kept to stay compatible with paper-editor.tsx */
@@ -181,7 +181,7 @@ export function ContentEditor(props: ContentEditorProps) {
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="secondary" size="sm" className="shadow">
-              <PanelsLeft className="w-4 h-4 mr-2" />
+              <PanelLeft className="w-4 h-4 mr-2" />
               Outline
             </Button>
           </SheetTrigger>
@@ -205,7 +205,7 @@ export function ContentEditor(props: ContentEditorProps) {
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="secondary" size="sm" className="shadow">
-              <PanelsRight className="w-4 h-4 mr-2" />
+              <PanelRight className="w-4 h-4 mr-2" />
               AI Assistant
             </Button>
           </SheetTrigger>
