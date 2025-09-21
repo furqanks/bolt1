@@ -1,99 +1,112 @@
-/* Google font (optional) */
+/* Inter font (optional) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Global CSS Variables ===== */
-:root {
-  /* App theme tokens (Tailwind HSL style) */
+/* ===== Theme tokens (HSL style for Tailwind) ===== */
+:root{
   --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+  --foreground: 0 0% 6%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
+  --card-foreground: 0 0% 6%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
-  --primary: 0 0% 9%;
+  --popover-foreground: 0 0% 6%;
+  --primary: 0 0% 10%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96.1%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
-  --accent: 0 0% 96.1%;
-  --accent-foreground: 0 0% 9%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 0% 3.9%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 6%;
   --radius: 0.5rem;
 
-  /* ===== Layout: sticky offsets =====
-     Header (~64px) + Section Tabs (~52px) = 116px.
-     Toolbars that are sticky should use this variable. */
-  --editor-sticky-offset: 116px;
+  /* ===== Editor layout vars =====
+     If you still see a gap *above* the toolbar, reduce this a bit.
+     If the toolbar sits on top of content, increase it slightly. */
+  --editor-sticky-offset: 96px;   /* header(56–64) + tabs(32–40) ≈ 96 */
+  --editor-toolbar-h: 40px;       /* toolbar height */
+  --editor-compact-text: 0.94;    /* global compact scale (0.90–1.00) */
 }
 
-.dark {
-  --background: 0 0% 3.9%;
+.dark{
+  --background: 0 0% 4%;
   --foreground: 0 0% 98%;
-  --card: 0 0% 3.9%;
+  --card: 0 0% 4%;
   --card-foreground: 0 0% 98%;
-  --popover: 0 0% 3.9%;
+  --popover: 0 0% 4%;
   --popover-foreground: 0 0% 98%;
   --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 9%;
-  --secondary: 0 0% 14.9%;
+  --primary-foreground: 0 0% 8%;
+  --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 0 0% 14.9%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 0 0% 15%;
   --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 63% 31%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 0 0% 83.1%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 0 0% 83%;
 }
 
-/* ===== Base ===== */
-@layer base {
-  * {
-    @apply border-border;
-  }
-  html, body {
-    height: 100%;
-  }
-  body {
+@layer base{
+  *{ @apply border-border; }
+  html,body{ height:100%; }
+  body{
     @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    /* Slightly compact UI to fit more on screen */
+    font-size: calc(16px * var(--editor-compact-text));
   }
 }
 
-/* ===== ContentEditable helpers (placeholders, rich text spacing) ===== */
-[contenteditable]:empty:before {
+/* ===== ContentEditable helpers ===== */
+[contenteditable]:empty:before{
   content: attr(data-placeholder);
-  color: #9ca3af; /* slate-400 */
-  pointer-events: none;
+  color:#9ca3af; /* slate-400 */
+  pointer-events:none;
 }
-[contenteditable] { outline: none; }
-[contenteditable] blockquote {
-  border-left: 4px solid #3b82f6; /* blue-500 */
-  margin: 1rem 0;
-  padding-left: 1rem;
-  font-style: italic;
+[contenteditable]{ outline:none; }
+[contenteditable] blockquote{
+  border-left:4px solid #3b82f6;
+  margin:0.75rem 0;
+  padding-left:0.75rem;
+  font-style:italic;
 }
-[contenteditable] ul, 
-[contenteditable] ol { margin: 1rem 0; padding-left: 2rem; }
-[contenteditable] li { margin: 0.25rem 0; }
-[contenteditable] h1, 
-[contenteditable] h2, 
-[contenteditable] h3 {
-  font-weight: 700;
-  margin: 1.25rem 0 0.75rem 0;
+[contenteditable] ul,[contenteditable] ol{ margin:0.75rem 0; padding-left:1.5rem; }
+[contenteditable] li{ margin:0.25rem 0; }
+[contenteditable] h1,[contenteditable] h2,[contenteditable] h3{
+  font-weight:700; margin:1rem 0 0.5rem 0;
 }
-[contenteditable] h1 { font-size: 1.5rem; }
-[contenteditable] h2 { font-size: 1.25rem; }
-[contenteditable] h3 { font-size: 1.125rem; }
-[contenteditable] p { margin: 1rem 0; }
+[contenteditable] h1{ font-size:1.25rem; }
+[contenteditable] h2{ font-size:1.125rem; }
+[contenteditable] h3{ font-size:1rem; }
+[contenteditable] p{ margin:0.75rem 0; }
+
+/* ===== Utility: hide horizontal scrollbar chrome but keep scroll ===== */
+.no-scrollbar::-webkit-scrollbar{ display:none; }
+.no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+/* ===== The scroll container inside the editor gets padding
+        so content never hides behind the sticky toolbar. ===== */
+.editor-scroll{
+  scroll-padding-top: calc(var(--editor-toolbar-h) + 8px);
+}
+
+/* Slight tweaks for small screens */
+@media (max-width: 640px){
+  :root{
+    --editor-sticky-offset: 92px;
+    --editor-toolbar-h: 38px;
+    --editor-compact-text: 0.92;
+  }
+}
