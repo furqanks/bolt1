@@ -55,7 +55,8 @@ export function ContentEditor(props: ContentEditorProps) {
 >
 
         <h2 className="text-lg md:text-xl font-semibold">Abstract</h2>
-        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300">
+       <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 pb-2">
+  {section.guidance}
           Include: purpose, methods, key findings, and conclusions. Keep it under 250 words.
         </p>
       </div>
