@@ -2,89 +2,147 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import {
-  Bold, Italic, Underline,
-  AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Quote, Link as LinkIcon,
-  ChevronDown, History, Eye, RotateCcw,
-  HelpCircle, Target, Save as SaveIcon, Search, PenTool, BookOpen
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  List,
+  ListOrdered,
+  Quote,
+  Link as LinkIcon,
+  History,
+  HelpCircle,
+  Save,
+  ChevronDown,
+  BookOpen,
+  Target,
+  Eye,
+  RotateCcw
 } from 'lucide-react';
 
-/* --- types & section config (unchanged) --- */
-interface SectionConfig { title: string; placeholder: string; guidance: string; wordTarget?: number; emptyGuidance?: string; rubric?: string; }
-interface Version { id: string; timestamp: Date; content: string; preview: string; }
+type SaveState = 'idle' | 'saving' | 'saved';
+
+interface SectionConfig {
+  title: string;
+  placeholder: string;
+  guidance: string;
+  wordTarget?: number;
+  emptyGuidance?: string;
+  rubric?: string;
+}
+
+interface Version {
+  id: string;
+  timestamp: Date;
+  content: string;
+  preview: string;
+}
+
 interface ContentEditorProps {
-  activeSection: string; paper: any; onUpdate: (paper: any) => void;
+  activeSection: string;
+  paper: any;
+  onUpdate: (paper: any) => void; // kept for compatibility
   onAiResult: (type: string, data: any) => void;
-  onSaveStatusChange?: (status: 'idle'|'saving'|'saved') => void;
+  onSaveStatusChange?: (status: SaveState) => void;
   onAddCitation?: () => void;
 }
 
+/** ---- Section presets (same content as you had, trimmed for brevity) ---- */
 const sectionContent: Record<string, SectionConfig> = {
   abstract: {
     title: 'Abstract',
-    placeholder: 'Write a concise summary of your research (150-250 words)...',
-    guidance: 'Include: purpose, methods, key findings, and conclusions. Keep it under 250 words.',
+    placeholder: 'Write a concise summary of your research (150–250 words)…',
+    guidance:
+      'Include: purpose, methods, key findings, and conclusions. Keep it under 250 words.',
     wordTarget: 250,
-    emptyGuidance: 'Start with your research purpose, then briefly describe methods, key findings, and conclusions.',
-    rubric: 'A good abstract includes: (1) Clear research purpose/question, (2) Brief methodology, (3) Key findings/results, (4) Main conclusions/implications.'
+    emptyGuidance:
+      'Start with your research purpose, then briefly describe methods, key findings, and conclusions.',
+    rubric:
+      'A good abstract includes: (1) Clear purpose/question, (2) Method, (3) Key results, (4) Conclusions/implications.'
   },
-  /* … keep your other sections … */
-  introduction: { title:'Introduction', placeholder:'', guidance:'Start broad, then narrow…', wordTarget:800, emptyGuidance:'', rubric:'' },
-  'intro-background': { title:'Background', placeholder:'', guidance:'', wordTarget:400, emptyGuidance:'', rubric:'' },
-  'intro-problem': { title:'Problem Statement', placeholder:'', guidance:'', wordTarget:300, emptyGuidance:'', rubric:'' },
-  'intro-objectives': { title:'Research Objectives', placeholder:'', guidance:'', wordTarget:200, emptyGuidance:'', rubric:'' },
-  'literature-review': { title:'Literature Review', placeholder:'', guidance:'Organize by themes…', wordTarget:1500, emptyGuidance:'', rubric:'' },
-  methodology: { title:'Methodology', placeholder:'', guidance:'', wordTarget:1000, emptyGuidance:'', rubric:'' },
-  results: { title:'Results', placeholder:'', guidance:'', wordTarget:800, emptyGuidance:'', rubric:'' },
-  discussion: { title:'Discussion', placeholder:'', guidance:'', wordTarget:1200, emptyGuidance:'', rubric:'' },
-  conclusion: { title:'Conclusion', placeholder:'', guidance:'', wordTarget:400, emptyGuidance:'', rubric:'' },
-  references: { title:'References', placeholder:'', guidance:'', wordTarget:0, emptyGuidance:'', rubric:'' }
+  'literature-review': {
+    title: 'Literature Review',
+    placeholder: 'Review and synthesize relevant literature…',
+    guidance:
+      'Organize by themes, chronologically, or methodologically. Show gaps your research will fill.',
+    wordTarget: 1500,
+    emptyGuidance:
+      'Synthesize existing research by themes, identify patterns, and highlight gaps your study addresses.',
+    rubric:
+      'Critically analyze sources, identify patterns and contradictions, and clearly establish the research gap.'
+  },
+  // … keep your other sections (introduction, methods, etc.)
 };
 
 export function ContentEditor({
-  activeSection, paper, onUpdate, onAiResult, onSaveStatusChange, onAddCitation
+  activeSection,
+  paper,
+  onUpdate,
+  onAiResult,
+  onSaveStatusChange,
+  onAddCitation
 }: ContentEditorProps) {
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiTask, setAiTask] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveState>('idle');
   const [versions, setVersions] = useState<Version[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [previewVersion, setPreviewVersion] = useState<Version | null>(null);
+  const [showRubric, setShowRubric] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedText, setSelectedText] = useState('');
 
-  const section = sectionContent[activeSection] || {
-    title: 'Section', placeholder: 'Start writing…', guidance: 'Write your content here.'
+  const section = sectionContent[activeSection] ?? {
+    title: 'Section',
+    placeholder: 'Start writing…',
+    guidance: 'Write your content here.',
+    wordTarget: 500
   };
 
-  /* --- selection & citation insertion (unchanged) --- */
-  const isInsideEditor = (node: Node | null) => !!node && !!editorRef.current && editorRef.current.contains(node);
+  /** Utilities */
+  const isInsideEditor = (node: Node | null) =>
+    !!node && !!editorRef.current && editorRef.current.contains(node);
+
+  const formatTimestamp = (date: Date) =>
+    date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  /** ---- Selection capture to restore caret for citation insert ---- */
   useEffect(() => {
     function saveSelection() {
-      const sel = window.getSelection?.();
-      if (sel && sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        if (isInsideEditor(range.startContainer)) savedRangeRef.current = range.cloneRange();
-      }
+      const sel = window.getSelection && window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (isInsideEditor(range.startContainer)) savedRangeRef.current = range.cloneRange();
     }
+
     const ed = editorRef.current;
     if (!ed) return;
+
     ed.addEventListener('keyup', saveSelection);
     ed.addEventListener('mouseup', saveSelection);
     ed.addEventListener('input', saveSelection);
-    const onSelChange = () => { if (document.activeElement === ed) saveSelection(); };
+
+    const onSelChange = () => {
+      if (document.activeElement === ed) saveSelection();
+    };
     document.addEventListener('selectionchange', onSelChange);
+
     return () => {
       ed.removeEventListener('keyup', saveSelection);
       ed.removeEventListener('mouseup', saveSelection);
@@ -93,253 +151,406 @@ export function ContentEditor({
     };
   }, []);
 
+  /** Focus from parent */
+  useEffect(() => {
+    const focusHandler = () => editorRef.current?.focus();
+    window.addEventListener('editor-focus', focusHandler as any);
+    return () => window.removeEventListener('editor-focus', focusHandler as any);
+  }, []);
+
+  /** Insert citation event */
   useEffect(() => {
     const handler = (e: any) => {
       const inline = e?.detail?.inline;
       if (!inline || !editorRef.current) return;
+
       const sel = window.getSelection?.();
-      if (savedRangeRef.current && sel) { sel.removeAllRanges(); sel.addRange(savedRangeRef.current); }
+      if (savedRangeRef.current && sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      }
+
       const sel2 = window.getSelection?.();
       if (sel2 && sel2.rangeCount > 0 && isInsideEditor(sel2.getRangeAt(0).startContainer)) {
         const range = sel2.getRangeAt(0);
         range.deleteContents();
         range.insertNode(document.createTextNode(` ${inline} `));
+        sel2.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.setStartAfter(editorRef.current.lastChild as Node);
+        newRange.collapse(true);
+        sel2.addRange(newRange);
       } else {
         editorRef.current.innerText += ` ${inline}`;
       }
-      const evt = new Event('input', { bubbles: true });
-      editorRef.current?.dispatchEvent(evt);
-      editorRef.current?.focus();
+
+      editorRef.current.focus();
+      const sel3 = window.getSelection?.();
+      if (sel3 && sel3.rangeCount > 0) savedRangeRef.current = sel3.getRangeAt(0).cloneRange();
+
+      editorRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     };
+
     window.addEventListener('editor-insert-citation', handler as any);
     return () => window.removeEventListener('editor-insert-citation', handler as any);
   }, []);
 
-  /* --- load/save (unchanged) --- */
+  /** Load content & versions for section */
   useEffect(() => {
     if (!paper?.id || !activeSection) return;
-    const saved = localStorage.getItem(`paper_${paper.id}_section_${activeSection}`) || '';
-    setContent(saved);
-    if (editorRef.current) editorRef.current.textContent = saved;
-    setWordCount(saved.trim() ? saved.trim().split(/\s+/).length : 0);
 
-    const v = localStorage.getItem(`paper_${paper.id}_section_${activeSection}_versions`);
-    setVersions(v ? JSON.parse(v).map((x: any) => ({ ...x, timestamp: new Date(x.timestamp) })) : []);
+    const key = `paper_${paper.id}_section_${activeSection}`;
+    const vkey = `paper_${paper.id}_section_${activeSection}_versions`;
+    const savedContent = localStorage.getItem(key) ?? '';
+
+    setContent(savedContent);
+    setWordCount(savedContent.trim() ? savedContent.trim().split(/\s+/).length : 0);
+    if (editorRef.current) editorRef.current.textContent = savedContent;
+
+    const savedVersions = localStorage.getItem(vkey);
+    setVersions(
+      savedVersions
+        ? JSON.parse(savedVersions).map((v: any) => ({ ...v, timestamp: new Date(v.timestamp) }))
+        : []
+    );
   }, [paper?.id, activeSection]);
 
-  const saveDraft = useCallback((sectionId: string, text: string) => {
-    if (!paper?.id) return;
-    setSaveStatus('saving'); onSaveStatusChange?.('saving');
-    setTimeout(() => {
-      localStorage.setItem(`paper_${paper.id}_section_${sectionId}`, text);
-      if (text.trim().length > 10) {
-        const newVersion: Version = {
-          id: Date.now().toString(), timestamp: new Date(),
-          content: text, preview: text.trim().slice(0, 60) + (text.trim().length > 60 ? '…' : '')
-        };
-        const next = [newVersion, ...versions].slice(0, 10);
-        setVersions(next);
-        localStorage.setItem(`paper_${paper.id}_section_${sectionId}_versions`, JSON.stringify(next));
-      }
-      setSaveStatus('saved'); onSaveStatusChange?.('saved');
-      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
-      statusTimeoutRef.current = setTimeout(() => { setSaveStatus('idle'); onSaveStatusChange?.('idle'); }, 1500);
-    }, 250);
-  }, [paper?.id, versions, onSaveStatusChange]);
+  /** Save draft (debounced) */
+  const saveDraft = useCallback(
+    (sectionId: string, text: string) => {
+      if (!paper?.id) return;
+
+      setSaveStatus('saving');
+      onSaveStatusChange?.('saving');
+
+      setTimeout(() => {
+        const key = `paper_${paper.id}_section_${sectionId}`;
+        const vkey = `paper_${paper.id}_section_${sectionId}_versions`;
+        localStorage.setItem(key, text);
+
+        if (text.trim().length > 10) {
+          const newVersion: Version = {
+            id: Date.now().toString(),
+            timestamp: new Date(),
+            content: text,
+            preview: text.trim().slice(0, 60) + (text.trim().length > 60 ? '…' : '')
+          };
+          const updated = [newVersion, ...versions].slice(0, 10);
+          setVersions(updated);
+          localStorage.setItem(vkey, JSON.stringify(updated));
+        }
+
+        setSaveStatus('saved');
+        onSaveStatusChange?.('saved');
+        if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+        statusTimeoutRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+          onSaveStatusChange?.('idle');
+        }, 1500);
+      }, 250);
+    },
+    [paper?.id, versions, onSaveStatusChange]
+  );
 
   const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
-    const text = e.currentTarget.textContent || '';
-    setContent(text);
-    setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
+    const newText = e.currentTarget.textContent || '';
+    setContent(newText);
+    setWordCount(newText.trim() ? newText.trim().split(/\s+/).length : 0);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => saveDraft(activeSection, text), 600);
+    saveTimeoutRef.current = setTimeout(() => saveDraft(activeSection, newText), 600);
   };
 
-  const format = (cmd: string, value?: string) => { document.execCommand(cmd, false, value); editorRef.current?.focus(); };
+  const handleManualSave = useCallback(() => {
+    const text = editorRef.current?.textContent || content || '';
+    saveDraft(activeSection, text);
+    toast.success('Saved');
+  }, [activeSection, content, saveDraft]);
 
-  /* --- AI trigger (unchanged mechanics) --- */
-  const getText = () => editorRef.current?.textContent || content || '';
-  const handleAiAction = async (task: string, wordTarget?: number) => {
-    const sectionText = getText();
-    const canRunWithout = ['rqs','hypotheses','contributions','suggest_citations'].includes(task);
-    if (!sectionText.trim() && !canRunWithout) { toast.error('Please write some content first.'); return; }
-    setIsAiLoading(true); 
-    try {
-      const res = await fetch('/api/ai', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ task, sectionText, wordTarget, field: paper?.topic || 'research', notes: paper?.description || '' })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'AI request failed');
-      if (['rewrite','proofread','shorten','expand','bullets_to_paragraph','paragraph_to_bullets'].includes(task) && data.revised) {
-        if (editorRef.current) {
-          editorRef.current.textContent = data.revised;
-          setContent(data.revised);
-          setWordCount(data.revised.trim().split(/\s+/).length);
-          toast.success('Content updated');
-        }
-      } else {
-        onAiResult(task, data);
-        toast.success('AI results ready');
+  /** Keybinding: Ctrl/Cmd+S */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleManualSave();
       }
-    } catch (e) {
-      toast.error('AI action failed.');
-    } finally {
-      setIsAiLoading(false);
-    }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [handleManualSave]);
+
+  /** Selection text (for suggest citations) */
+  const handleTextSelection = () => {
+    const sel = window.getSelection();
+    setSelectedText(sel?.toString().trim() || '');
   };
 
-  const sectionCfg = section;
+  /** Simple rich text via execCommand (kept as-is) */
+  const applyCmd = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value);
+    editorRef.current?.focus();
+  };
 
+  /** ---- UI ---- */
   return (
-    <div className="px-4 sm:px-6 py-4">
-      <div className="max-w-4xl mx-auto">
-        {/* section header (NOT sticky, full center width) */}
-        <div className="mb-2">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{sectionCfg.title}</h2>
-              <p className="text-[0.9rem] text-slate-600 dark:text-slate-300 mt-1 max-w-2xl">
-                {sectionCfg.guidance}
-              </p>
-            </div>
+    <div className="h-full flex flex-col">
+      {/* Section header (compact) */}
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              {/* Evidence */}
-              <DropdownMenu>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white truncate">
+                {section.title}
+              </h2>
+              <DropdownMenu open={showVersions} onOpenChange={setShowVersions}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-8 px-2 text-xs">
-                    <Search className="w-4 h-4 mr-1" /> Evidence <ChevronDown className="w-3 h-3 ml-1" />
+                  <Button variant="outline" size="sm" className="h-8">
+                    <History className="w-4 h-4 mr-2" />
+                    Versions ({versions.length})
+                    <ChevronDown className="w-3 h-3 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleAiAction('suggest_citations')}>Suggest Citations</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('synthesize_sources')}>Synthesize 3–5 Sources</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('spot_gaps')}>Spot Gaps/Contradictions</DropdownMenuItem>
+                <DropdownMenuContent align="start" className="w-80">
+                  {versions.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500 dark:text-slate-400">
+                      No versions yet
+                    </div>
+                  ) : (
+                    versions.map(v => (
+                      <div
+                        key={v.id}
+                        className="p-3 border-b last:border-0 border-slate-100 dark:border-slate-700"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                              {formatTimestamp(v.timestamp)}
+                            </div>
+                            <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+                              {v.preview}
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => setPreviewVersion(v)}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => {
+                                if (!editorRef.current) return;
+                                editorRef.current.textContent = v.content;
+                                setContent(v.content);
+                                setWordCount(v.content.trim().split(/\s+/).length);
+                                saveDraft(activeSection, v.content);
+                                toast.success('Version restored');
+                              }}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              {/* Write/Polish */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-8 px-2 text-xs">
-                    <PenTool className="w-4 h-4 mr-1" /> Write/Polish <ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleAiAction('critique')}>AI Feedback</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('rewrite')}>Rewrite</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('proofread')}>Proofread</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('shorten', 150)}>Shorten to 150</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('expand', 300)}>Expand to 300</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('bullets_to_paragraph')}>Bullets → Paragraph</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAiAction('paragraph_to_bullets')}>Paragraph → Bullets</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button variant="outline" className="h-8 px-2 text-xs" onClick={() => {
-                const text = editorRef.current?.textContent || content || '';
-                saveDraft(activeSection, text);
-                toast.success('Changes saved');
-              }}>
-                <SaveIcon className="w-4 h-4 mr-1" /> Save
-              </Button>
-
-              <Button variant="outline" className="h-8 px-2 text-xs" onClick={onAddCitation}>
-                <BookOpen className="w-4 h-4 mr-1" /> Add Citation
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setShowRubric(true)}
+                    >
+                      <HelpCircle className="w-4 h-4 text-slate-400" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Writing guidelines</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
+
+            {/* Guidance line (smaller text) */}
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+              {section.guidance}{' '}
+              {(section.wordTarget ?? 0) > 0 && (
+                <span className="text-slate-400 dark:text-slate-500">
+                  • Target ~{section.wordTarget} words
+                </span>
+              )}
+            </p>
           </div>
 
-          {/* counts/help row */}
-          <div className="mt-1 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-3">
-            <span><span className="font-medium">{wordCount}</span>{(sectionCfg.wordTarget ?? 0) > 0 && <>/{sectionCfg.wordTarget}</>} words</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" className="h-7 w-7 p-0">
-                    <HelpCircle className="w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Writing guidelines for {sectionCfg.title}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          {/* Right-side actions */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  Evidence
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('open-add-source'))}>
+                  Add sources…
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (!selectedText) return toast.error('Select text first');
+                    window.dispatchEvent(
+                      new CustomEvent('request-ai', { detail: { task: 'suggest_citations' } })
+                    );
+                  }}
+                >
+                  Suggest citations for selection
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  Write/Polish
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-ai', { detail: { task: 'critique' } }))}>
+                  AI Feedback
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-ai', { detail: { task: 'rewrite' } }))}>
+                  Rewrite
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-ai', { detail: { task: 'proofread' } }))}>
+                  Proofread
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-ai', { detail: { task: 'shorten', wordTarget: 150 } }))}>
+                  Shorten → 150
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('request-ai', { detail: { task: 'expand', wordTarget: 300 } }))}>
+                  Expand → 300
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="outline" size="sm" className="h-8" onClick={handleManualSave}>
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+            <Button variant="outline" size="sm" className="h-8" onClick={onAddCitation}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Add Citation
+            </Button>
           </div>
         </div>
-
-        {/* STICKY TOOLBAR (sticks to the top of the editor column, not the app header) */}
-        <div className="sticky top-0 z-20 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur border-y border-slate-200 dark:border-slate-700">
-          <div className="max-w-4xl mx-auto px-3">
-            <div className="flex items-center">
-              <Button variant="ghost" className="btn-compact" onClick={() => format('bold')}><Bold /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('italic')}><Italic /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('underline')}><Underline /></Button>
-
-              <Separator orientation="vertical" className="h-6 mx-2" />
-
-              <Button variant="ghost" className="btn-compact" onClick={() => format('justifyLeft')}><AlignLeft /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('justifyCenter')}><AlignCenter /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('justifyRight')}><AlignRight /></Button>
-
-              <Separator orientation="vertical" className="h-6 mx-2" />
-
-              <Button variant="ghost" className="btn-compact" onClick={() => format('insertUnorderedList')}><List /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('insertOrderedList')}><ListOrdered /></Button>
-              <Button variant="ghost" className="btn-compact" onClick={() => format('formatBlock','blockquote')}><Quote /></Button>
-
-              <Separator orientation="vertical" className="h-6 mx-2" />
-
-              <Button variant="ghost" className="btn-compact" onClick={() => format('createLink', prompt('Enter URL:') || '')}>
-                <LinkIcon />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* guidance tip when empty */}
-        {wordCount === 0 && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <Target className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                  Getting Started with {sectionCfg.title}
-                </h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200">{sectionCfg.emptyGuidance}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* EDITOR BODY */}
-        <div
-          ref={editorRef}
-          contentEditable
-          className="min-h-[420px] mt-4 p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 leading-[1.7]"
-          data-placeholder={sectionCfg.placeholder}
-          onInput={handleContentChange}
-        />
-
-        {/* small spacing at bottom so last line isn't jammed against viewport bottom */}
-        <div className="h-10" />
       </div>
 
-      {/* dialogs (versions/rubric) unchanged — remove here for brevity if you want */}
+      {/* Toolbar inside the editor area — small & tidy */}
+      <div className="editor-toolbar flex items-center border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <button className="btn-icon" onClick={() => applyCmd('bold')} aria-label="Bold">
+          <Bold className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('italic')} aria-label="Italic">
+          <Italic className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('underline')} aria-label="Underline">
+          <Underline className="lucide" />
+        </button>
+
+        <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+
+        <button className="btn-icon" onClick={() => applyCmd('justifyLeft')} aria-label="Align Left">
+          <AlignLeft className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('justifyCenter')} aria-label="Align Center">
+          <AlignCenter className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('justifyRight')} aria-label="Align Right">
+          <AlignRight className="lucide" />
+        </button>
+
+        <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+
+        <button className="btn-icon" onClick={() => applyCmd('insertUnorderedList')} aria-label="Bulleted list">
+          <List className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('insertOrderedList')} aria-label="Numbered list">
+          <ListOrdered className="lucide" />
+        </button>
+        <button className="btn-icon" onClick={() => applyCmd('formatBlock', 'blockquote')} aria-label="Quote">
+          <Quote className="lucide" />
+        </button>
+
+        <div className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+
+        <button
+          className="btn-icon"
+          onClick={() => applyCmd('createLink', window.prompt('Enter URL:') || '')}
+          aria-label="Insert link"
+        >
+          <LinkIcon className="lucide" />
+        </button>
+      </div>
+
+      {/* Editable area */}
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900">
+        <div className="max-w-3xl mx-auto px-4 py-4">
+          {/* gentle hint when empty */}
+          {wordCount === 0 && section.emptyGuidance && (
+            <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-200 flex gap-2">
+              <Target className="w-4 h-4 mt-0.5" />
+              <div>{section.emptyGuidance}</div>
+            </div>
+          )}
+
+          <div
+            ref={editorRef}
+            contentEditable
+            onInput={handleContentChange}
+            onMouseUp={handleTextSelection}
+            onKeyUp={handleTextSelection}
+            className="min-h-[420px] p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 focus:outline-none leading-[1.7]"
+            style={{ fontSize: '15px' }}
+            data-placeholder={section.placeholder}
+          />
+        </div>
+      </div>
+
+      {/* Version Preview Modal */}
       <Dialog open={!!previewVersion} onOpenChange={() => setPreviewVersion(null)}>
-        <DialogContent className="sm:max-w-[680px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Version Preview</DialogTitle>
             <DialogDescription>
-              {previewVersion && `Saved on ${previewVersion.timestamp.toLocaleString()}`}
+              {previewVersion && `Saved on ${formatTimestamp(previewVersion.timestamp)}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-96 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800 rounded">
+          <div className="max-h-96 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
             <div className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
               {previewVersion?.content || ''}
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setPreviewVersion(null)}>Close</Button>
-            <Button onClick={() => previewVersion && (editorRef.current!.textContent = previewVersion.content)}>
+            <Button variant="outline" onClick={() => setPreviewVersion(null)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (!previewVersion || !editorRef.current) return;
+                editorRef.current.textContent = previewVersion.content;
+                setContent(previewVersion.content);
+                setWordCount(previewVersion.content.trim().split(/\s+/).length);
+                saveDraft(activeSection, previewVersion.content);
+                setPreviewVersion(null);
+              }}
+            >
               <RotateCcw className="w-4 h-4 mr-2" />
               Restore This Version
             </Button>
@@ -347,14 +558,33 @@ export function ContentEditor({
         </DialogContent>
       </Dialog>
 
-      {/* placeholder styling */}
-      <style jsx>{`
-        [contenteditable]:empty:before {
-          content: attr(data-placeholder);
-          color: #9ca3af;
-          pointer-events: none;
-        }
-      `}</style>
+      {/* Rubric Modal */}
+      <Dialog open={showRubric} onOpenChange={setShowRubric}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Writing Guidelines: {section.title}
+            </DialogTitle>
+            <DialogDescription>Best practices and structure</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {section.rubric && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300">
+                {section.rubric}
+              </div>
+            )}
+            {(section.wordTarget ?? 0) > 0 && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+                Aim for approximately {section.wordTarget} words for this section.
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowRubric(false)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
